@@ -21,7 +21,7 @@ button.Text="RUN"
 button.BackgroundColor3 = Color3.new(0,1,0)
 
 function onClicked(GUI)
-x["Execute Script"].Value = script.Parent.Parent.TextBox.Text
+x["Execute Script"].Value = textbox.Text
 wait(0.1)
 loadstring(x["Execute Script"].Value)()
 end
