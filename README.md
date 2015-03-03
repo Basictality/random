@@ -8,6 +8,7 @@ textbox.Size = UDim2.new(0, 370,0, 1500)
 textbox.BackgroundColor3=Color3.new(255,255,255)
 textbox.Position = UDim2.new(0,0,0,0)
 textbox.TextXAlignment = "Left"
+textbox.Text = "print
 textbox.TextYAlignment = "Top"
 textbox.ClearTextOnFocus = false
 textbox.MultiLine = true
