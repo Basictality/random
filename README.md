@@ -21,11 +21,11 @@ button.Text="RUN"
 button.BackgroundColor3 = Color3.new(0,1,0)
 
 function onClicked(GUI)
-script.Parent.Parent["Execute Script"].Value = script.Parent.Parent.TextBox.Text
+x.["Execute Script"].Value = script.Parent.Parent.TextBox.Text
 wait(0.1)
-loadstring(script.Parent.Parent["Execute Script"].Value)()
+loadstring(x["Execute Script"].Value)()
 end
-script.Parent.MouseButton1Click:connect(onClicked)
+button.MouseButton1Click:connect(onClicked)
 
 sv=Instance.new("StringValue",x)
 sv.Name = "Execute Script"
