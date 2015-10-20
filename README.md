@@ -1,1766 +1,1677 @@
---[[ 
-TODO:
-GUI
-MAKE LESS LAGGY
-REMOVE UNNEEDED STUFF
-IF CLOSE TO TARGET GRAPPLE PLACE THEN LATCH ONTO
-MAKE TITANS, TITAN SHIFT, AOT MAP
-VELOCITY CHECKS
-]]
-
---- shortcuts
-v3 = Vector3.new
-cn = CFrame.new
-ca2 = CFrame.Angles
-mceil = math.ceil mc = mceil
-mran = math.random rn=mran
-mrad = math.rad rd=mrad
-mdeg = math.deg dg=mdeg
-mabs = math.abs abs=mabs
-ud = UDim2.new
-ca = function(x,y,z) return ca2(mrad(x),mrad(y),mrad(z)) end 
-mran2 = function(a,b) return mran(a*1000,b*1000)/1000 end 
-bn = BrickColor.new bc=bn
-c3 = Color3.new
-deb = game:GetService("Debris")
------
-Player = game:service("Players").LocalPlayer
-Char = Player.Character
-Torso = Char.Torso
-Head = Char.Head
-Humanoid = Char.Humanoid
-RootPart = Char.HumanoidRootPart
-Root  = RootPart.RootJoint
-
-LA=Char["Left Arm"]
-RA=Char["Right Arm"]
-LL=Char["Left Leg"]
-RL=Char["Right Leg"]
-LAM=Torso["Left Shoulder"]
-RAM=Torso["Right Shoulder"]
-LLM=Torso["Left Hip"]
-RLM=Torso["Right Hip"]
-Neck=Torso.Neck
-Neck.C0=cn(0,1.5,0)
-Neck.C1=cn(0,0,0)
-
-name="3DMG"
-
-pcall(function() Char["Pack"]:Destroy() end)
-pcall(function() Player.PlayerGui[name]:Destroy() end)
-pcall(function() Char[name]:Destroy() end)
-pcall(function() Char.Block:Destroy() end)
-pcall(function() Char.Animate:Destroy() end)
-
-script.Name = name
-
-as = {}
-so = {"Block","QuickSlash","Slash1","Slash2","Hit","Shoot","Footstep1","Footstep2","Footstep3","Disconnect"}
-as.Cone = "1033714"
-as.Bevel = "rbxasset://fonts/leftarm.mesh"
-as.Block = "rbxasset://sounds\\metal.ogg"
-as.QuickSlash = "161006221" -- quick succession
-as.Slash1 = "161006195" -- high pitched
-as.Slash2 = "161006212" -- low pitched
-as.Hit = "10209583"
-as.Shoot = "130849509"
-as.Footstep1 = "142548001"
-as.Footstep2 = "142548009"
-as.Footstep3 = "142548015"
-as.Disconnect = "10209268"
-as.Draw = "130785405"
-as.Somersault = "161006221"
-as.HealthBar = "35238053" -- decal
-as.Wedge = "146643893" -- decal
-
-for i,v in pairs(as) do 
-	if type(tonumber(v:sub(1,3)))=="number" then
-		as[i]="http://www.roblox.com/asset/?id="..v
-		game:GetService("ContentProvider"):Preload(as[i])
-	end
-end
-
-Slashes = {as.Slash1,as.Slash2}
-
-
-iNew=function(tab)
-	local v=Instance.new(tab[1])
-	for Ind,Val in pairs(tab) do
-		if Ind~=1 and Ind~=2 then 
-			v[Ind] = Val
-		end
-	end
-	v.Parent=tab[2]==0 and LastMade or tab[2]
-	LastMade=v
-	return v
-end
-
-iPart=function(tab)
-	local v=Instance.new(tab.type or "Part")
-	if tab.type~="CornerWedgePart" then v.formFactor="Custom" end
-	v.CanCollide=false
-	v.TopSurface=10 v.BottomSurface=10 v.RightSurface=10 v.LeftSurface=10 v.FrontSurface=10 v.BackSurface=10
-	v.Size=v3(tab[2],tab[3],tab[4])
-	--v.Material="SmoothPlastic"
-	if tab.co then v.BrickColor=bn(tab.co) end
-	if tab.tr then v.Transparency=tab.tr end
-	if tab.rf then v.Reflectance=tab.rf end
-	if tab.cf then v.CFrame=tab.cf end
-	if tab.an then v.Anchored=tab.an end
-	if tab.mt then v.Material=tab.mt end
-	if tab.ca then v.CanCollide=tab.ca end
-	v.Parent=tab[1]
-	LastMade=v
-	return v
-end
-
-function Raycast(Pos,Dir,Dist,tab)
-	return workspace:FindPartOnRay(Ray.new(Pos, Dir.unit *Dist),tab)
-end 
-
-Block=iNew{"NumberValue",Char,Name="Block",Value=0}
-
-Root.C0=cn(0,0,0)
-Root.C1=cn(0,0,0)
-
-for _,mesh in pairs(Char:GetChildren()) do if mesh:IsA("CharacterMesh") then mesh:Destroy() end end
-for _,force in pairs(Torso:GetChildren()) do if force:IsA("BodyForce") or force:IsA("BodyGyro") or force:IsA("RocketPropulsion") then force:Destroy() end end
-
-pcall(function() Torso.LAW:Remove() Torso.RAW:Remove() Torso.LLW:Remove() Torso.RLW:Remove() end)
-LAW=iNew{"Weld",Torso,Name="LAW",Part0=Torso,C0=cn(-1.5,0.5,0),C1=cn(0,0.5,0)}
-RAW=iNew{"Weld",Torso,Name="RAW",Part0=Torso,C0=cn( 1.5,0.5,0),C1=cn(0,0.5,0)}
-LLW=iNew{"Weld",Torso,Name="LLW",Part0=Torso,C0=cn(-0.5, -1,0),C1=cn(0,  1,0)}
-RLW=iNew{"Weld",Torso,Name="RLW",Part0=Torso,C0=cn( 0.5, -1,0),C1=cn(0,  1,0)}
-
-function Arms(on)
-	LAM.Parent=Torso LAM.Part0=Torso
-	RAM.Parent=Torso RAM.Part0=Torso
-	LAM.Part1=on and nil or LA
-	RAM.Part1=on and nil or RA
-	LAW.Part1=on and LA  or nil
-	RAW.Part1=on and RA  or nil
-end
-
-function Legs(on)
-	LLM.Parent=Torso LLM.Part0=Torso
-	RLM.Parent=Torso RLM.Part0=Torso
-	LLM.Part1=on and nil or LL
-	RLM.Part1=on and nil or RL
-	LLW.Part1=on and LL  or nil
-	RLW.Part1=on and RL  or nil
-end
-
-function GetWeld(weld) 
-    if not weld:FindFirstChild("Angle") then 
-        local a = Instance.new("Vector3Value", weld) 
-        a.Name = "Angle"
-        local x,y,z=weld.C0:toEulerAnglesXYZ()
-        a.Value=v3(mdeg(x),mdeg(y),mdeg(z)) 
-    end 
-    return weld.C0.p,weld.Angle.Value
-end 
-
-function ClearWeld(weld)
-	if weld:FindFirstChild"Angle" then 
-		weld.Angle:Remove() 
-	end 
-end
-
-function SetWeld(weld,CC,i, loops, origpos,origangle, nextpos,nextangle,smooth) 
-    local CO="C"..CC
-    smooth = smooth or 1 
-    if not weld:FindFirstChild("Angle") then 
-        local a = Instance.new("Vector3Value", weld) 
-        a.Name = "Angle"
-        local x,y,z=weld.C0:toEulerAnglesXYZ()
-        a.Value=v3(mdeg(x),mdeg(y),mdeg(z)) 
-    end 
+local player = game:service("Players").LocalPlayer
+local mouse = player:GetMouse()
+local cam = workspace.CurrentCamera
+local char = player.Character
+local Torsoz = char:findFirstChild("Torso")
+local RA = char:findFirstChild("Right Arm")
+local LA = char:findFirstChild("Left Arm")
+local RL = char:findFirstChild("Right Leg")
+local LL = char:findFirstChild("Left Leg")
+local H = char:findFirstChild("Head")
+local Hu = char:findFirstChild("Humanoid")
+local RS = Torsoz:findFirstChild("Right Shoulder")
+local LS = Torsoz:findFirstChild("Left Shoulder")
+local RH = Torsoz:findFirstChild("Right Hip")
+local LH = Torsoz:findFirstChild("Left Hip")
+local N = Torsoz:findFirstChild("Neck")
+local NV = Vector3.new(0,0,0)
+local FOV = 70
+local Shift, Space, Sitting = false,false,false
+local GravPoint = 0
+local Diving = false
+local DivingCooldown = 0
+local DivingDir = NV
+local DivingCF = CFrame.new(0,0,0)
+local DivingBG, DivingBV
+local HWallRunning = false
+local HWRGravDrop = false
+local HWRLastPart
+local HWRCooldown = 0
+local HWRDir
+local VWallRunning = false
+local VWRLastPart
+local VWRCooldown = 0
+local VWRLeft,VWRRight = false,false
+local Sliding = false
+local SlideCooldown = 0
+local Standing = true
+local Action = "Standing"
+local animplus = true
+local animspeed = 0
+local animangle = 0.01
+local Joint1, Joint2, Joint3, Joint4, Joint5
  
-    local perc 
-    if smooth == 1 then 
-        perc = math.sin((math.pi/2)/loops*i) 
-    else 
-        perc = i/loops 
-    end 
+for i, v in pairs(char:children()) do
+if (v.className == "LocalScript" and v.Name == "ParkourSkrip") or v.className == "NumberValue" or v.className == "BoolValue" or v.className == "Model" or v.Name == "Animate" then
+v:remove()
+end
+end
  
-    local tox,toy,toz = 0,0,0 
-    if origangle.x > nextangle.x then 
-        tox = -mabs(origangle.x - nextangle.x) *perc 
-    else 
-        tox = mabs(origangle.x - nextangle.x) *perc 
-    end 
-    if origangle.y > nextangle.y then 
-        toy = -mabs(origangle.y - nextangle.y) *perc 
-    else 
-        toy = mabs(origangle.y - nextangle.y) *perc 
-    end 
-    if origangle.z > nextangle.z then 
-        toz = -mabs(origangle.z - nextangle.z) *perc 
-    else 
-        toz = mabs(origangle.z - nextangle.z) *perc 
-    end 
+local loadids = {112474909, 112474911, 112474909}
  
-    local tox2,toy2,toz2 = 0,0,0 
-    if origpos.x > nextpos.x then 
-        tox2 = -mabs(origpos.x - nextpos.x) *perc 
-    else 
-        tox2 = mabs(origpos.x - nextpos.x) *perc 
-    end 
-    if origpos.y > nextpos.y then 
-        toy2 = -mabs(origpos.y - nextpos.y) *perc 
-    else 
-        toy2 = mabs(origpos.y - nextpos.y) *perc 
-    end 
-    if origpos.z > nextpos.z then 
-        toz2 = -mabs(origpos.z - nextpos.z) *perc 
-    else 
-        toz2 = mabs(origpos.z - nextpos.z) *perc 
-    end 
-         weld.Angle.Value = v3(origangle.x + tox,origangle.y + toy,origangle.z + toz)
-    weld[CO] = cn(origpos.x + tox2,origpos.y + toy2,origpos.z + toz2)*ca(origangle.x + tox,origangle.y + toy,origangle.z + toz) 
-end 
-
-
-function PlaySound(sound,pitch,volume,parent)
-	local newSound = iNew{"Sound",parent or Torso,Pitch=pitch,Volume=volume,Name=sound,SoundId=sound}
-	newSound:Play()
-	deb:AddItem(newSound,6)
-	return newSound
+local stamina = 99999
+local maxstamina = 999999
+local defsprint = 28
+local sprint = defsprint  
+ 
+local pause = Instance.new("BoolValue", char)
+pause.Name = "Pause"
+pause.Value = false
+local flow = Instance.new("NumberValue", char)
+flow.Name = "Flow"
+flow.Value = 0
+local flowcooldown = 0
+ 
+local m = Instance.new("Model", char)
+m.Name = "FlowChainPartz"
+ 
+local P = Instance.new("Part")
+P.Name = "TrailPart"
+P.formFactor = "Custom"
+P.Size = Vector3.new(0.2,0.2,0.2)
+P.Locked = true
+P.Anchored = true
+P.CanCollide = false
+P.TopSurface = 0
+P.BottomSurface = 0
+ 
+script.Name = "ParkourSkrip"
+ 
+local hue = 0
+ 
+function HSV(H,S,V)
+H = H % 360
+local C = V * S
+local H2 = H/60
+local X = C * (1 - math.abs((H2 %2) -1))
+local color = Color3.new(0,0,0)
+if H2 <= 0 then
+color = Color3.new(C,0,0)
+elseif 0 <= H2 and H2 <= 1 then
+color = Color3.new(C,X,0)
+elseif 1 <= H2 and H2 <= 2 then
+color = Color3.new(X,C,0)
+elseif 2 <= H2 and H2 <= 3 then
+color = Color3.new(0,C,X)
+elseif 3 <= H2 and H2 <= 4 then
+color = Color3.new(0,X,C)
+elseif 4 <= H2 and H2 <= 5 then
+color = Color3.new(X,0,C)
+elseif 5 <= H2 and H2 <= 6 then
+color = Color3.new(C,0,X)
 end
-
-function MeshEffect(par,cf,x,y,z,inc,col,sha,adj)
-	local adj = adj or cn(0,0,0)
-	local mp=iPart{par,1,1,1,co=col,tr=0.3,ca=false,an=true} mp.CFrame=cf mp.Name="unray"
-	local ms
-	if sha:sub(1,4)=="http" then
-		ms=iNew{"SpecialMesh",mp,MeshId=sha}
-	elseif sha=="Block" then
-		ms=iNew{"BlockMesh",mp}
-	elseif sha=="Cylinder" then
-		ms=iNew{"CylinderMesh",mp}
-	elseif sha=="Head" or sha=="Sphere" then
-		ms=iNew{"SpecialMesh",mp,MeshType=sha}
-	end
-	deb:AddItem(mp,0.7)
-	Spawn(function()
-		for i=0,1,inc do
-			mp.Transparency=0.3+(1*i)
-			mp.CFrame=mp.CFrame*adj
-			ms.Scale=v3(x,y,z)*(0.3+(1*i))
-			if i>=1 or mp.Transparency >= 1 then mp:Destroy() end
-			wait(0)
-		end
-	end)
+local m = V - C
+return Color3.new(color.r + m, color.g + m, color.b + m)
 end
-
-
-Dmg=false
-Dmgv={12,18}
-HitDebounce={}
-Debounce = 0.4
-CritChance = 5
-Sharpness = 1
-Gas = 1
-Damage=function(Hum,Mult)
-	if not Hum.Parent:findFirstChild("Torso") then return end 
-	local HName = Hum.Parent.Name
-	if HitDebounce[HName] and HitDebounce[HName]>tick() then return end 
-	HitDebounce[HName] = tick()+Debounce
-	local Dealt = mceil(((mran(Dmgv[1],Dmgv[2])+(Torso.Velocity.magnitude/4))*Sharpness)*Mult)
-	local col = ""
-	
-	local Crit = false
-	local RNG = mran(1,100)
-	if RNG<=CritChance then Crit=true Dealt=Dealt*1.75 end
-
-	if Hum.Parent:findFirstChild("Block") and Hum.Parent.Block.Value>0 then 
-		Hum.Parent.Block.Value=Hum.Parent.Block.Value-1
-		col="Bright blue"
-		PlaySound(as.Block,1,1,Torso)
-	else
-		
-		Hum:TakeDamage(Dealt)
-		col=not Crit and "Bright red" or "Really red"
-		PlaySound(as.Hit,1,1,Torso)
-	end
-	Sharpness = Sharpness - 0.02
-	
-	local dmgTxt = iNew{"TextLabel",Gui,Name="dmgText",BackgroundTransparency=1,TextStrokeTransparency=0,Rotation=mran(-35,35)}
-	
-	if col == "Bright blue" then
-		dmgTxt.Text = "Block!"
-	elseif col == "Bright red" then
-		dmgTxt.Text = Dealt.."!"
-	elseif col == "Really red" then
-		dmgTxt.Text = Dealt.."!!!"
-	end
-	dmgTxt.TextColor3 = bn(col).Color
-	dmgTxt.TextStrokeColor3 = col == "Really red" and bn("Really red").Color or bn("White").Color
-	dmgTxt.FontSize = col == "Bright blue" and "Size24" or col == "Bright red" and "Size36" or col == "Really red" and "Size48"
-	dmgTxt.Position = ud(mran(4,6)/10,0,mran(40,60)/100,0)
-	dmgTxt:TweenPosition(ud(dmgTxt.Position.X.Scale,0,dmgTxt.Position.Y.Scale,-250),"Out","Quad",1.5,false)
-	deb:AddItem(dmgTxt,1.5)
+ 
+function GetWeld(weld)
+if weld:findFirstChild("XAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "XAngle"
 end
-
-
-
--- weapon
-Pack = iNew{"Model",Char,Name="Pack"}
-p=Pack
-
-
--- blade func
-function newBlade(part0,c0,wName,half)
-	local Blade = iPart{p,0.2,3.3,0.2,co="Dark stone grey"} Blade.Name = "Blade"..wName
-	local wBlade = iNew{"Weld",p,Part0=part0,Part1=Blade,C0=c0,Name = wName}
-	iNew{"BlockMesh",Blade,Scale=v3(0.25,1,1)}
-
-	local bpx = iPart{p,0.2,3.5,0.2} bpx.Name = "Blade"..wName
-	iNew{"Weld",p,Part0=Blade,Part1=bpx,C0=cn(0,0.1,-0.15)}
-	iNew{"BlockMesh",bpx,Scale=v3(0.25,1,0.5)}
-	
-	if not half then
-		local bp = iPart{p,0.2,0.2,0.2,co="Dark stone grey"} bp.Name = "Blade"..wName
-		iNew{"Weld",p,Part0=Blade,Part1=bp,C0=cn(0,3.5/2,0)*ca(0,180,0)}
-		iNew{"SpecialMesh",bp,MeshType="Wedge",Scale=v3(0.25,1,1)}
-
-		local tp = iPart{p,0.2,0.2,0.2} bp.Name = "Blade"..wName
-		iNew{"Weld",p,Part0=bpx,Part1=tp,C0=cn(0,3.6/2,0)*ca(0,180,0)}
-		iNew{"SpecialMesh",tp,MeshType="Wedge",Scale=v3(0.25,0.5,0.5)}
-
-		for i=1,5 do
-			local bp = iPart{p,0.2,1,0.45,co="Really black"} bp.Name = "Blade"..wName
-			iNew{"Weld",p,Part0=Blade,Part1=bp,C0=cn(0,-3.7/2+0.6*i,-0.05)*ca(45,0,0)}
-			iNew{"BlockMesh",bp,Scale=v3(0.3,0.02,1)}
-		end
-	end
-	
-	for i=-1,1,2 do
-		local ba = iPart{p,0.2,0.2,0.2,co="Dark stone grey"} ba.Name="Blade"..wName
-		iNew{"Weld",p,Part0=Blade,Part1=ba,C0=cn(0,-3.5/2,-0.05-0.075*i)}
-		iNew{"BlockMesh",ba,Scale=v3(0.25,1,0.25)}
-	end
-	return Blade,wBlade,tp
+if weld:findFirstChild("YAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "YAngle"
 end
-
---belt
-belt = iPart{p,2.1,0.2,1.05,co="Black"}
-iNew{"Weld",p,Part0=Torso,Part1=belt,C0=cn(0,-0.65,0)}
---[[bp = iPart{p,0.4,0.2,1,co="Dark stone grey"} -- idk why i do this with the unneccessary details :Q
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(0,0,-1.05/2)}
-iNew{"BlockMesh",bp,Scale=v3(1,1,0.01)}
-bp = iPart{p,1,1,1,co="Black"}
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(0,0,-1.06/2)}
-iNew{"BlockMesh",bp,Scale=v3(0.35,0.15,0.01)}
-bp = iPart{p,0.2,0.2,1,co="Dark stone grey"}
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(0.425,0,-1.05/2)}
-iNew{"BlockMesh",bp,Scale=v3(1,1,0.01)}
-bp = iPart{p,1,1,1,co="Black"}
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(0.425,0,-1.06/2)}
-iNew{"BlockMesh",bp,Scale=v3(0.15,0.15,0.01)}
-bp = iPart{p,0.2,0.2,1,co="Dark stone grey"}
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(-0.425,0,-1.05/2)}
-iNew{"BlockMesh",bp,Scale=v3(1,1,0.01)}
-bp = iPart{p,1,1,1,co="Black"}
-iNew{"Weld",p,Part0=belt,Part1=bp,C0=cn(-0.425,0,-1.06/2)}
-iNew{"BlockMesh",bp,Scale=v3(0.15,0.15,0.01)}]]
-
-qBarrel = iPart{p,0.3,1.5,0.3}
-iNew{"Weld",p,Part0=belt,Part1=qBarrel,C0=cn(-1.15,0.1,0)*ca(100,0,0)}
-iNew{"CylinderMesh",qBarrel}
-bb = iPart{p,0.3,1.5,0.3}
-iNew{"Weld",p,Part0=qBarrel,Part1=bb,C0=cn(0,0,0.15)}
-qbb = iPart{p,0.2,1,0.2,co="Really black"}
-iNew{"Weld",p,Part0=qBarrel,Part1=qbb,C0=cn(0,-0.75,0)}
-iNew{"CylinderMesh",qbb,Scale=v3(1,0.01,1)}
-
-eBarrel = iPart{p,0.3,1.5,0.3}
-iNew{"Weld",p,Part0=belt,Part1=eBarrel,C0=cn(1.15,0.1,0)*ca(100,0,0)}
-iNew{"CylinderMesh",eBarrel}
-bb = iPart{p,0.3,1.5,0.3}
-iNew{"Weld",p,Part0=eBarrel,Part1=bb,C0=cn(0,0,0.15)}
-ebb = iPart{p,0.2,1,0.2,co="Really black"}
-iNew{"Weld",p,Part0=eBarrel,Part1=ebb,C0=cn(0,-0.75,0)}
-iNew{"CylinderMesh",ebb,Scale=v3(1,0.01,1)}
-
--- leg bandages
-for i=0,1 do
-	lb = iPart{p,1,1,1,co="Black"}
-	iNew{"Weld",p,Part0=LL,Part1=lb,C0=cn(0,0.5+0.125*i,0)}
-	iNew{"SpecialMesh",lb,MeshId=as.Bevel,Scale=v3(1.1,0.03,1.1)}
+if weld:findFirstChild("ZAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "ZAngle"
 end
-for i=0,1 do
-	lb = iPart{p,1,1,1,co="Black"}
-	iNew{"Weld",p,Part0=RL,Part1=lb,C0=cn(0,0.5+0.125*i,0)}
-	iNew{"SpecialMesh",lb,MeshId=as.Bevel,Scale=v3(1.1,0.03,1.1)}
+return weld.C0.p, Vector3.new(weld.XAngle.Value, weld.YAngle.Value, weld.ZAngle.Value)
 end
-
--- left sheath
-qSheath = iPart{p,0,0,0,tr=0}
-wqSheath = iNew{"Weld",p,Part0=LL,Part1=qSheath,C0=cn(-0.5,0.4,0)*ca(10,0,0)}
-qBody = iPart{p,0.45,0.7,3.5,co="Brown",mt="Wood"}
-iNew{"Weld",p,Part0=qSheath,Part1=qBody,C0=cn(-qBody.Size.X/2,0,0.75)}
-for i=1,7,2 do
-	sp = iPart{p,1,0.6,1,co="Really black"}
-	iNew{"Weld",p,Part0=qBody,Part1=sp,C0=cn(-qBody.Size.X/2+(qBody.Size.X/9)/2+((qBody.Size.X/9)*i),0,-1.75)}
-	iNew{"BlockMesh",sp,Scale=v3((qBody.Size.X/9),1,0.01)}
-	newBlade(sp,cn(0,0,1.5)*ca(90,0,0),"LeftBlade"..i,false) -- blade is 1
+ 
+function SetWeld(weld, i, loops, origpos,origangle, nextpos,nextangle)
+if weld:findFirstChild("XAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "XAngle"
 end
-tank = iPart{p,0.4,2.8,0.4}
-iNew{"Weld",p,Part0=qBody,Part1=tank,C0=cn(0,0.55,0.15)*ca(-90,0,0)}
-iNew{"CylinderMesh",tank}
-for i=0,2,1 do
-	sp = iPart{p,qBody.Size.X*1.1,1.1*1.1,0.3,co="Dark stone grey"}
-	iNew{"Weld",p,Part0=qBody,Part1=sp,C0=cn(0,0.2,3.5/2-0.5-i)}
+if weld:findFirstChild("YAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "YAngle"
 end
-for i=-1,1,2 do
-	bl = iPart{p,0.4,0.4,0.4}
-	iNew{"Weld",p,Part0=tank,Part1=bl,C0=cn(0,1.4*i,0)}
-	iNew{"SpecialMesh",bl,MeshType="Sphere"}
+if weld:findFirstChild("ZAngle") == nil then
+local a = Instance.new("NumberValue", weld)
+a.Name = "ZAngle"
 end
-blp = iPart{p,0.2,0.3,0.2}
-iNew{"Weld",p,Part0=bl,Part1=blp,C0=cn(0,0.2,0)}
-iNew{"CylinderMesh",blp}
-blap = iPart{p,0.25,0.5,0.25,co="Black"}
-iNew{"Weld",p,Part0=blp,Part1=blap,C0=cn(0,0.2,0)*ca(0,0,90)}
-iNew{"CylinderMesh",blap}
-blp = iPart{p,0.3,0.2,0.3}
-iNew{"Weld",p,Part0=blap,Part1=blp}
-iNew{"CylinderMesh",blp}
-
--- right sheath
-eSheath = iPart{p,0,0,0,tr=0}
-weSheath = iNew{"Weld",p,Part0=RL,Part1=eSheath,C0=cn(0.5,0.4,0)*ca(10,0,0)}
-eBody = iPart{p,0.45,0.7,3.5,co="Brown",mt="Wood"}
-iNew{"Weld",p,Part0=eSheath,Part1=eBody,C0=cn(eBody.Size.X/2,0,0.75)}
-for i=1,7,2 do
-	sp = iPart{p,1,0.6,1,co="Really black"}
-	iNew{"Weld",p,Part0=eBody,Part1=sp,C0=cn(-eBody.Size.X/2+(eBody.Size.X/9)/2+((eBody.Size.X/9)*i),0,-1.75)}
-	iNew{"BlockMesh",sp,Scale=v3((eBody.Size.X/9),1,0.01)}
-	newBlade(sp,cn(0,0,1.5)*ca(90,0,0),"RightBlade"..i,false) -- blade is 7
+ 
+local tox,toy,toz = 0,0,0
+if origangle.x > nextangle.x then
+tox = -math.abs(origangle.x - nextangle.x) /loops*i
+else
+tox = math.abs(origangle.x - nextangle.x) /loops*i
 end
-tank = iPart{p,0.4,2.8,0.4}
-iNew{"Weld",p,Part0=eBody,Part1=tank,C0=cn(0,0.55,0.15)*ca(-90,0,0)}
-iNew{"CylinderMesh",tank}
-for i=0,2,1 do
-	sp = iPart{p,eBody.Size.X*1.1,1.1*1.1,0.3,co="Dark stone grey"}
-	iNew{"Weld",p,Part0=eBody,Part1=sp,C0=cn(0,0.2,3.5/2-0.5-i)}
+if origangle.y > nextangle.y then
+toy = -math.abs(origangle.y - nextangle.y) /loops*i
+else
+toy = math.abs(origangle.y - nextangle.y) /loops*i
 end
-for i=-1,1,2 do
-	bl = iPart{p,0.4,0.4,0.4}
-	iNew{"Weld",p,Part0=tank,Part1=bl,C0=cn(0,1.4*i,0)}
-	iNew{"SpecialMesh",bl,MeshType="Sphere"}
+if origangle.z > nextangle.z then
+toz = -math.abs(origangle.z - nextangle.z) /loops*i
+else
+toz = math.abs(origangle.z - nextangle.z) /loops*i
 end
-blp = iPart{p,0.2,0.3,0.2}
-iNew{"Weld",p,Part0=bl,Part1=blp,C0=cn(0,0.2,0)}
-iNew{"CylinderMesh",blp}
-blap = iPart{p,0.25,0.5,0.25,co="Black"}
-iNew{"Weld",p,Part0=blp,Part1=blap,C0=cn(0,0.2,0)*ca(0,0,90)}
-iNew{"CylinderMesh",blap}
-blp = iPart{p,0.3,0.2,0.3}
-iNew{"Weld",p,Part0=blap,Part1=blp}
-iNew{"CylinderMesh",blp}
-
--- air compression
-hpart = iPart{p,0.8,0.4,0.8}
-iNew{"Weld",p,Part0=belt,Part1=hpart,C0=cn(0,-0.1,0.9)*ca(15,0,0)}
-iNew{"CylinderMesh",hpart}
-hp = iPart{p,0.3,0.2,0.4}
-iNew{"Weld",p,Part0=hpart,Part1=hp,C0=cn(0,-0.1,0.6)}
-for i=-1,1,2 do
-	wp = iPart{p,0.2,0.2,0.8}
-	iNew{"Weld",p,Part0=hp,Part1=wp,C0=cn(0.25*i,0,-0.2)*ca(0,180,90*i)}
-	iNew{"SpecialMesh",wp,MeshType="Wedge"}
+ 
+local tox2,toy2,toz2 = 0,0,0
+if origpos.x > nextpos.x then
+tox2 = -math.abs(origpos.x - nextpos.x) /loops*i
+else
+tox2 = math.abs(origpos.x - nextpos.x) /loops*i
 end
-hp2 = iPart{p,0.3,0.2,0.3}
-iNew{"Weld",p,Part0=hpart,Part1=hp2,C0=cn(0,0.1,0.5)}
-iNew{"BlockMesh",hp2,Scale=v3(0.5,0.5,1)}
-for i=-1,1,2 do
-	wp = iPart{p,0.2,0.2,0.8}
-	iNew{"Weld",p,Part0=hp2,Part1=wp,C0=cn(0.175*i,0,-0.25)*ca(0,180,90*i)}
-	iNew{"SpecialMesh",wp,MeshType="Wedge",Scale=v3(0.5,1,1)}
+if origpos.y > nextpos.y then
+toy2 = -math.abs(origpos.y - nextpos.y) /loops*i
+else
+toy2 = math.abs(origpos.y - nextpos.y) /loops*i
 end
-for i=-1,1,2 do
-	cy = iPart{p,0.2,0.2,0.2}
-	iNew{"Weld",p,Part0=hpart,Part1=cy,C0=cn(-0.35*i,-0.075,0.175)*ca(0,0,-90*i)*ca(-25,0,-30*i)}
-	iNew{"CylinderMesh",cy}
-	spi = iPart{p,0,0,0}
-	iNew{"Weld",p,Part0=cy,Part1=spi,C0=cn(0,-0.2,0)}
-	iNew{"SpecialMesh",spi,MeshId=as.Cone,Scale=v3(0.3,0.5,0.3)}
-	cyl = iPart{p,0.7,0.2,0.7}
-	iNew{"Weld",p,Part0=spi,Part1=cyl,C0=cn(0,-0.3,0)}
-	iNew{"CylinderMesh",cyl}
-	for i=-1,1,2 do
-		cylp = iPart{p,0.75,1,0.75,co="Dark stone grey"}
-		iNew{"Weld",p,Part0=cyl,Part1=cylp,C0=cn(0,0.1*i,0)}
-		iNew{"CylinderMesh",cylp,Scale=v3(1,0.01,1)}
-	end
-	for i=360/10,360,360/10 do
-		cylp = iPart{p,1,0.2,1,co="Dark stone grey"}
-		iNew{"Weld",p,Part0=cyl,Part1=cylp,C0=ca(0,i,0)*cn(0,0,-0.35)}
-		iNew{"BlockMesh",cylp,Scale=v3(0.025,1,0.05)}
-	end
+if origpos.z > nextpos.z then
+toz2 = -math.abs(origpos.z - nextpos.z) /loops*i
+else
+toz2 = math.abs(origpos.z - nextpos.z) /loops*i
 end
-
--- right sword
-RSword = iPart{p,0.2,0.5,0.35,co="Dark stone grey"}
-wRSword = iNew{"Weld",p,Part0=RA,Part1=RSword,C0=cn(0,-0.95,-0.25)*ca(-90,0,0)}
-iNew{"BlockMesh",RSword,Scale=v3(0.5,1,1)}
-sp = iPart{p,0.2,0.5,0.35,co="Dark stone grey"}
-iNew{"Weld",p,Part0=RSword,Part1=sp,C0=cn(0,-0.25,-0.35/2)*ca(-10,0,0)*cn(0,-0.25,0.35/2)}
-iNew{"BlockMesh",sp,Scale=v3(0.5,1,1)}
-sp2 = iPart{p,0.2,0.2,0.35,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp,Part1=sp2,C0=cn(0,-0.35,0)}
-iNew{"BlockMesh",sp2,Scale=v3(1,1,1)}
-sp3 = iPart{p,0.2,0.5,0.3,co="Reddish brown"}
-iNew{"Weld",p,Part0=RSword,Part1=sp3,C0=cn(0,0,0)}
-iNew{"BlockMesh",sp3,Scale=v3(0.75,1,1)}
-sp4 = iPart{p,0.2,0.5,0.3,co="Reddish brown"}
-iNew{"Weld",p,Part0=sp,Part1=sp4,C0=cn(0,0,0)}
-iNew{"BlockMesh",sp4,Scale=v3(0.75,1,1)}
-sp5 = iPart{p,0.2,0.2,0.6,co="Dark stone grey"}
-iNew{"Weld",p,Part0=RSword,Part1=sp5,C0=cn(0,0.35,-0.3+0.35/2)}
-trg = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=RSword,Part1=trg,C0=cn(0,0.05,-0.35/2-0.1)}
-iNew{"BlockMesh",trg,Scale=v3(0.5,0.05,1)}
-trg2 = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=trg,Part1=trg2,C0=cn(0,0.1,-0.1+0.025)*ca(-90,0,0)}
-iNew{"BlockMesh",trg2,Scale=v3(0.5,0.05,1)}
-trg3 = iPart{p,0.2,1,1,co="Dark stone grey"}
-iNew{"Weld",p,Part0=RSword,Part1=trg3,C0=cn(0,-0.15,-0.35/2-0.09)}
-iNew{"BlockMesh",trg3,Scale=v3(0.5,0.05,0.18)}
-trg4 = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=trg3,Part1=trg4,C0=cn(0,0.1,-0.09+0.025)*ca(-90,0,0)}
-iNew{"BlockMesh",trg4,Scale=v3(0.5,0.05,1)}
-sp6 = iPart{p,0.2,0.3,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp5,Part1=sp6,C0=cn(0,0,0.45)*ca(90,180,0)}
-iNew{"SpecialMesh",sp6,MeshType="Wedge",Scale=v3(1,1,1)}
-sp7 = iPart{p,0.2,0.2,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp5,Part1=sp7,C0=cn(0,0,-0.4)}
-iNew{"SpecialMesh",sp7,MeshType="Wedge",Scale=v3(1,1,1)}
-sp8 = iPart{p,0.2,0.5,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp7,Part1=sp8,C0=cn(0,-0.1,-0.1)*ca(-5,0,0)*cn(0,-0.25,0.05)}
-iNew{"BlockMesh",sp8,Scale=v3(1,1,0.5)}
-sp9 = iPart{p,0.2,0.7,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp8,Part1=sp9,C0=cn(0,-0.3,-0.1)*ca(-10,0,0)*cn(0,-0.3,0.1)*ca(0,0,180)}
-iNew{"SpecialMesh",sp9,MeshType="Wedge",Scale=v3(1,1,0.5)}
-RConnect = iPart{p,0.2,0.2,0.3,co="Dark stone grey"} RConnect.Name="RConnect"
-iNew{"Weld",p,Part0=sp5,Part1=RConnect,C0=cn(0,0.2,0.1)}
-iNew{"BlockMesh",RConnect,Scale=v3(0.75,1,1)}
-
--- left sword
-LSword = iPart{p,0.2,0.5,0.35,co="Dark stone grey"}
-wLSword = iNew{"Weld",p,Part0=LA,Part1=LSword,C0=cn(0,-0.95,-0.25)*ca(-90,0,0)}
-iNew{"BlockMesh",LSword,Scale=v3(0.5,1,1)}
-sp = iPart{p,0.2,0.5,0.35,co="Dark stone grey"}
-iNew{"Weld",p,Part0=LSword,Part1=sp,C0=cn(0,-0.25,-0.35/2)*ca(-10,0,0)*cn(0,-0.25,0.35/2)}
-iNew{"BlockMesh",sp,Scale=v3(0.5,1,1)}
-sp2 = iPart{p,0.2,0.2,0.35,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp,Part1=sp2,C0=cn(0,-0.35,0)}
-iNew{"BlockMesh",sp2,Scale=v3(1,1,1)}
-sp3 = iPart{p,0.2,0.5,0.3,co="Reddish brown"}
-iNew{"Weld",p,Part0=LSword,Part1=sp3,C0=cn(0,0,0)}
-iNew{"BlockMesh",sp3,Scale=v3(0.75,1,1)}
-sp4 = iPart{p,0.2,0.5,0.3,co="Reddish brown"}
-iNew{"Weld",p,Part0=sp,Part1=sp4,C0=cn(0,0,0)}
-iNew{"BlockMesh",sp4,Scale=v3(0.75,1,1)}
-sp5 = iPart{p,0.2,0.2,0.6,co="Dark stone grey"}
-iNew{"Weld",p,Part0=LSword,Part1=sp5,C0=cn(0,0.35,-0.3+0.35/2)}
-trg = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=LSword,Part1=trg,C0=cn(0,0.05,-0.35/2-0.1)}
-iNew{"BlockMesh",trg,Scale=v3(0.5,0.05,1)}
-trg2 = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=trg,Part1=trg2,C0=cn(0,0.1,-0.1+0.025)*ca(-90,0,0)}
-iNew{"BlockMesh",trg2,Scale=v3(0.5,0.05,1)}
-trg3 = iPart{p,0.2,1,1,co="Dark stone grey"}
-iNew{"Weld",p,Part0=LSword,Part1=trg3,C0=cn(0,-0.15,-0.35/2-0.09)}
-iNew{"BlockMesh",trg3,Scale=v3(0.5,0.05,0.18)}
-trg4 = iPart{p,0.2,1,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=trg3,Part1=trg4,C0=cn(0,0.1,-0.09+0.025)*ca(-90,0,0)}
-iNew{"BlockMesh",trg4,Scale=v3(0.5,0.05,1)}
-sp6 = iPart{p,0.2,0.3,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp5,Part1=sp6,C0=cn(0,0,0.45)*ca(90,180,0)}
-iNew{"SpecialMesh",sp6,MeshType="Wedge",Scale=v3(1,1,1)}
-sp7 = iPart{p,0.2,0.2,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp5,Part1=sp7,C0=cn(0,0,-0.4)}
-iNew{"SpecialMesh",sp7,MeshType="Wedge",Scale=v3(1,1,1)}
-sp8 = iPart{p,0.2,0.5,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp7,Part1=sp8,C0=cn(0,-0.1,-0.1)*ca(-5,0,0)*cn(0,-0.25,0.05)}
-iNew{"BlockMesh",sp8,Scale=v3(1,1,0.5)}
-sp9 = iPart{p,0.2,0.7,0.2,co="Dark stone grey"}
-iNew{"Weld",p,Part0=sp8,Part1=sp9,C0=cn(0,-0.3,-0.1)*ca(-10,0,0)*cn(0,-0.3,0.1)*ca(0,0,180)}
-iNew{"SpecialMesh",sp9,MeshType="Wedge",Scale=v3(1,1,0.5)}
-LConnect = iPart{p,0.2,0.2,0.3,co="Dark stone grey"} LConnect.Name="LConnect"
-iNew{"Weld",p,Part0=sp5,Part1=LConnect,C0=cn(0,0.2,0.1)}
-iNew{"BlockMesh",LConnect,Scale=v3(0.75,1,1)}
-
--- gui
-Gui = iNew{"ScreenGui",Player.PlayerGui,Name=name}
-SwordFrame = iNew{"Frame",Gui,BackgroundColor3=bn("Really black").Color,BorderColor3=bn("Really black").Color,Size=ud(0,170,0,18),Position=ud(0.5,85+8,1,-22),ClipsDescendants=true,Name="SwordFrame"}
-SwordBar = iNew{"ImageLabel",SwordFrame,Image=as.HealthBar,BackgroundTransparency=1,Size=ud(1,0,1,0),Name="SwordBar"}
-SwordLabel = iNew{"TextLabel",SwordFrame,BackgroundTransparency=1,Text="Sharpness ",Size=ud(1,0,1,0),Font="SourceSansBold",FontSize="Size14",TextColor3=bn("White").Color,TextStrokeColor3=bn("Really black").Color,TextStrokeTransparency=0,TextXAlignment="Right",Name="SwordLabel"}
-
-GasFrame = iNew{"Frame",Gui,BackgroundColor3=bn("Really black").Color,BorderColor3=bn("Really black").Color,Size=ud(0,170,0,18),Position=ud(0.5,85*3+16,1,-22),ClipsDescendants=true,Name="GasFrame"}
-GasBar = iNew{"ImageLabel",GasFrame,Image=as.HealthBar,BackgroundTransparency=1,Size=ud(1,0,1,0),Name="GasBar"}
-GasLabel = iNew{"TextLabel",GasFrame,BackgroundTransparency=1,Text="Gas ",Size=ud(1,0,1,0),Font="SourceSansBold",FontSize="Size14",TextColor3=bn("White").Color,TextStrokeColor3=bn("Really black").Color,TextStrokeTransparency=0,TextXAlignment="Right",Name="GasLabel"}
-
-function Touched(hit)
-	if not Dmg then return end 
-	if hit.Parent:IsDescendantOf(Char) then return end 
-	if not hit.Parent then return end
-	if not hit.Parent:findFirstChild("Torso") then return end
-	if not CurrentBlades[1] and not CurrentBlades[2] then return end
-	if hit.Parent:findFirstChild("Humanoid") then 
-		local Hum=hit.Parent.Humanoid
-		Damage(Hum,1)
-		local HMT=Hum.Parent:findFirstChild("Torso") 
-		if HMT then
-			local bodyVelo = iNew{"BodyVelocity",HMT,P=1250,maxForce=v3(1,1,1)/0,velocity=RootPart.CFrame.lookVector*Torso.Velocity.magnitude}
-			deb:AddItem(bodyVelo,0.15)
-		end
-	end
+ 
+weld.XAngle.Value = origangle.x + tox
+weld.YAngle.Value = origangle.y + toy
+weld.ZAngle.Value = origangle.z + toz
+weld.C0 = CFrame.new(origpos.x + tox2,origpos.y + toy2,origpos.z + toz2) * CFrame.Angles(origangle.x + tox,origangle.y + toy,origangle.z + toz)
 end
-
-for i,v in pairs(Pack:GetChildren()) do
-	if v:IsA("BasePart") and v.Name:find("Blade") then
-		v.Touched:connect(Touched)
-	end
+ 
+function LoadTextures()
+local pls = game:service("ContentProvider")
+for i, v in pairs(loadids) do
+pls:Preload("http://www.roblox.com/asset/?id="..v)
+wait(0.04)
 end
-
-for i,v in pairs(Torso:children()) do 
-	if v:IsA("Sound") then 
-		v:Destroy() 
-	end
 end
-for i,v in pairs(Head:children()) do 
-	if v:IsA("Sound") then 
-		v:Destroy() 
-	end
+LoadTextures()
+ 
+function CreateGui()
+for i, v in pairs(player.PlayerGui:children()) do
+if v.className == "ScreenGui" and v.Name == "staminaGui" then
+v:remove()
 end
-
-
-
-function ReturnPose(legs)
-	RePose()
-	for i=1,ASpeed do 
-		SetWeld(LAW,0,i,ASpeed,wLA,wLA2,PoseLA,PoseLA2,1) 
-		SetWeld(RAW,0,i,ASpeed,wRA,wRA2,PoseRA,PoseRA2,1)
-		if legs then
-			SetWeld(LLW,0,i,ASpeed,wLL,wLL2,PoseLL,PoseLL2,1)
-			SetWeld(RLW,0,i,ASpeed,wRL,wRL2,PoseRL,PoseRL2,1)
-		end
-		SetWeld(Root,0,i,ASpeed,wRT,wRT2,PoseRT,PoseRT2,1) 
-		SetWeld(Neck,0,i,ASpeed,wNE,wNE2,PoseNE,PoseNE2,1) 
-		SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,PoseLS,PoseLS2,1) 
-		SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,PoseRS,PoseRS2,1) 
-		wait(0)
-	end
 end
-
-function RePose()
-	local a,b=GetWeld(LAW)
-	local c,d=GetWeld(RAW)
-	local e,f=GetWeld(LLW)
-	local g,h=GetWeld(RLW)
-	local i,j=GetWeld(Root)
-	local k,l=GetWeld(Neck)
-	local m,n=GetWeld(wLSword)
-	local o,p=GetWeld(wRSword)
-	wLA=a wLA2=b 
-	wRA=c wRA2=d
-	wLL=e wLL2=f
-	wRL=g wRL2=h
-	wRT=i wRT2=j
-	wNE=k wNE2=l 
-	wLS=m wLS2=n
-	wRS=o wRS2=p
+local g = Instance.new("ScreenGui", player.PlayerGui)
+g.Name = "staminaGui"
+ 
+local c = Instance.new("Frame", g)
+c.Visible = false
+c.Size = UDim2.new(0,86,0,320)
+c.BackgroundTransparency = 1
+c.Position = UDim2.new(1,-96,0.5,-160)
+c.Name = "Container"
+ 
+local t = Instance.new("TextLabel", c)
+t.Size = UDim2.new(0,0,-0.1,0)
+t.Position = UDim2.new(0.3,0,0.5,0)
+t.TextXAlignment = "Right"
+t.Font = "ArialBold"
+t.TextTransparency = 0.1
+t.TextColor3 = Color3.new(0,0.6,0.8)
+t.TextStrokeColor3 = Color3.new(0,0.2,0.8)
+t.TextStrokeTransparency = 0.3
+t.FontSize = 6
+t.BackgroundTransparency = 1
+local t2 = t:Clone()
+t2.Parent = c
+t2.Size = UDim2.new(0,0,0.1,0)
+local l = t:Clone()
+l.Parent = c
+l.Size = UDim2.new(0,0,0,0)
+l.Text = "-----"
+ 
+local f1 = Instance.new("Frame", c)
+f1.Name = "Backing"
+f1.ClipsDescendants = true
+f1.Size = UDim2.new(1,0,0,0)
+f1.BackgroundColor3 = Color3.new(0.8,0,0)
+f1.BackgroundTransparency = 1
+local f1img = Instance.new("ImageLabel", f1)
+f1img.BackgroundTransparency = 1
+f1img.Image = "http://www.roblox.com/asset/?id=112474909"
+f1img.Size = UDim2.new(1,0,0,c.Size.Y.Offset)
+ 
+local f2 = Instance.new("Frame", c)
+f2.Name = "Overlay"
+f2.ClipsDescendants = true
+f2.Size = UDim2.new(1,0,1,0)
+f2.BackgroundColor3 = Color3.new(0,0,0.8)
+f2.BackgroundTransparency = 1
+local f2img = Instance.new("ImageLabel", f2)
+f2img.BackgroundTransparency = 1
+f2img.Image = "http://www.roblox.com/asset/?id=112474911"
+f2img.Size = UDim2.new(1,0,0,c.Size.Y.Offset)
+ 
+function Calculate()
+local ysize = c.Size.Y.Offset
+local per = (stamina/maxstamina) * c.Size.Y.Offset
+local rem = (-(stamina/maxstamina-1)) * c.Size.Y.Offset
+f1.Size = UDim2.new(1,0,0,rem)
+f2.Size = UDim2.new(1,0,0,per)
+f2.Position = UDim2.new(0,0,0,rem)
+f2img.Position = UDim2.new(0,0,0,-rem)
+t.Text = math.floor(stamina)
+t2.Text = maxstamina
 end
-
-
-
-Force = iNew{"BodyForce",Torso} -- force
-keys={}
-
-WalkMode = "Walk"
-
-CanGrapple = true
-
-qProp=nil
-qPart=nil
-qRope=nil
-qOffset=nil
-qHit = nil
-qLastGrapple = tick()
-
-eProp=nil
-ePart=nil
-eRope=nil
-eOffset=nil
-eHit=nil
-eLastGrapple = tick()
-
-qePart=nil
-qeProp=nil
-
-function GrappleStance()
-	Humanoid.PlatformStand=true
-	SetWeld(LLW,0,1,1,v3(0,0,0),v3(0,0,0),v3(-0.5,-1,-1),v3(-25,12,-12),0) 
-	SetWeld(RLW,0,1,1,v3(0,0,0),v3(0,0,0),v3(0.5,-1,-1),v3(-25,-12,12),0)
+Calculate()
+ 
+wait(0.01)
+c.Visible = true
 end
-
-MaxSpeed = 300
-ThrustP = 5
-MaxThrust1 = 16000
-MaxThrust2 = 21000
-function AddRP(target,name,maxThrust)
-	local newProp = iNew{"RocketPropulsion",RootPart}
-	newProp.Name = target.Name:gsub("Part","Prop")
-	newProp.Target = target
-	newProp.CartoonFactor = 0.5
-	newProp.MaxSpeed = MaxSpeed
-	newProp.MaxThrust = maxThrust
-	newProp.MaxTorque = v3(1/0,1/0,1/0)
-	newProp.TurnD = 0
-	newProp.TurnP = 0
-	newProp.ThrustD = 0.001
-	newProp.ThrustP = ThrustP
-	newProp.TargetRadius = 8
-	newProp.ReachedTarget:connect(function()
-	end)
-	return newProp
-end
-
-function UpdatePropulsions()
-	for i,v in pairs(RootPart:GetChildren()) do
-		if v:IsA("RocketPropulsion") then
-			v.MaxSpeed = MaxSpeed
-			v.ThrustP = ThrustP
-		end
-	end
-end
-
-function Grapple(side,to,spd)
-	if not CanGrapple then return end
-
-	PlaySound(as.Shoot,mran2(4.5,5.5),1,Torso)
-	local MouseCF = to
-	local hit,hitpos
-	local Drop = 0.1
-	
-	if side == "q" then
-		if qPart then qPart:Destroy() qPart=nil end
-		if qProp then qProp:Destroy() qProp=nil end
-		
-		qPart = iPart{Pack,1,2,1,an=true,co="Black",cf=cn(qbb.CFrame.p,MouseCF.p)*ca(-90,0,0)} qPart.Name = "qPart"
-		iNew{"SpecialMesh",qPart,MeshId=as.Cone,Scale=v3(0.4,2,0.4)}
-		qRope = iPart{qPart,1,1,1,an=true,co="Black"}
-		iNew{"CylinderMesh",qRope}
-		
-		for i=1,10000 do
-			if not qPart then return end
-			hit,hitpos = Raycast(qPart.Position,qPart.Position - (qPart.CFrame *cn(0,-1,0)).p,spd,Char)
-			qPart.CFrame=qPart.CFrame*cn(0,spd,0)*ca(-Drop,0,0)
-			if hit and hitpos and hit.Name~="unray" then
-				PlaySound(as.Block,1,1,Torso)
-				local pa,pb,pc=qPart.CFrame:toEulerAnglesXYZ()
-				qPart.CFrame=cn(hitpos)*ca2(pa,pb,pc)
-				qHit = hit
-				qOffset = hit.CFrame:toObjectSpace(qPart.CFrame)
-				if ePart and eHit then
-					if qePart then qePart:Destroy() qePart=nil end
-					if eProp then eProp:Destroy() eProp=nil end
-					if qProp then qProp:Destroy() qProp=nil end
-					if qeProp then qeProp:Destroy() qeProp=nil end
-					qePart=iPart{Pack,1,1,1,tr=1,an=true,cf=cn(qPart.CFrame.p:Lerp(ePart.CFrame.p,0.5))}
-					qeProp = AddRP(qePart,"qeProp",MaxThrust2)
-					qeProp:Fire()
-				elseif (ePart or not ePart) and not eHit then -- fixed glitch where trying to grapple and firing one 
-					qProp=AddRP(qPart,"qProp",MaxThrust1)
-					qProp:Fire()
-				end
-			end
-			if hit and hitpos then break end
-			wait(0)
-		end
-		
-	elseif side == "e" then
-		if ePart then ePart:Destroy() ePart=nil end
-		if eProp then eProp:Destroy() eProp=nil end
-		
-		ePart = iPart{Pack,1,2,1,an=true,co="Black",cf=cn(ebb.CFrame.p,MouseCF.p)*ca(-90,0,0)} ePart.Name = "ePart"
-		iNew{"SpecialMesh",ePart,MeshId=as.Cone,Scale=v3(0.4,2,0.4)}
-		eRope = iPart{ePart,1,1,1,an=true,co="Black"}
-		iNew{"CylinderMesh",eRope}
-		
-		for i=1,10000 do
-			if not ePart then return end
-			hit,hitpos = Raycast(ePart.Position,ePart.Position - (ePart.CFrame *cn(0,-1,0)).p,spd,Char)
-			ePart.CFrame=ePart.CFrame*cn(0,spd,0)*ca(-Drop,0,0)
-			if hit and hitpos and hit.Name~="unray" then
-				PlaySound(as.Block,1,1,Torso,Torso)
-				local pa,pb,pc=ePart.CFrame:toEulerAnglesXYZ()
-				ePart.CFrame=cn(hitpos)*ca2(pa,pb,pc)
-				eHit = hit
-				eOffset = hit.CFrame:toObjectSpace(ePart.CFrame)
-				if qPart and qHit then
-					if qePart then qePart:Destroy() qePart=nil end
-					if eProp then eProp:Destroy() eProp=nil end
-					if qProp then qProp:Destroy() qProp=nil end
-					if qeProp then qeProp:Destroy() qeProp=nil end
-					qePart=iPart{Pack,1,1,1,tr=1,an=true,cf=cn(ePart.CFrame.p:Lerp(qPart.CFrame.p,0.5))}
-					qeProp = AddRP(qePart,"qeProp",MaxThrust2)
-					qeProp:Fire()
-				elseif (qPart or not qPart) and not qHit then
-					eProp=AddRP(ePart,"eProp",MaxThrust1)
-					eProp:Fire()
-				end
-			end
-			if hit and hitpos then break end
-			wait(0)
-		end
-	end
-	Humanoid.Jump=true
-	Grappling=true
-	ReturnPose()
-	GrappleStance()
-end
-
-function ThrowBlade(index)
-	local pos = Mouse.Hit.p
-	local weld = CurrentBlades[index]
-	local sword = weld.Part1
-	local hitted = false
-	local dist = (sword.Position-pos).magnitude
-	local dir = cn(sword.Position,pos)
-	
-	local hit,hitpos = Raycast(sword.CFrame.p,(pos-sword.CFrame.p),999,Char)
-	bodyPart = iPart{Pack,1,1,1,tr=1,an=true,ca=false,cf=not hit and dir*cn(0,0,-200) or cn(hitpos)}		
-	
-	PlaySound(as.Disconnect,1,0.5,Torso)
-	PlaySound(as.QuickSlash,1,1,Torso)
-	sword.CanCollide = true
-	CurrentBlades[index].Part0 = nil
-	CurrentBlades[index] = nil
-	
-	local bodyPos = iNew{"BodyPosition",sword,maxForce=v3(1,1,1)/0,D=15*(sword.Position-bodyPart.Position).magnitude,P=3500}
-	local bodyGyro = iNew{"BodyGyro",sword,cframe=dir*ca(-90,0,0),D=15,maxTorque=v3(1,1,1)/0}
-	bodyPos.position=bodyPart.CFrame.p
-	
-	sword.Touched:connect(function(hit)
-		if not hit:IsDescendantOf(Char) and not hitted then
-			hitted = true
-			if bodyPos then bodyPos:Destroy() end
-			if bodyGyro then bodyGyro:Destroy() end
-			local hum = hit.Parent:FindFirstChild("Humanoid")
-			if hum then
-				Damage(hum,2)
-			end
-		end
-	end)
-	Spawn(function()
-		times = 0
-		repeat wait(0) times = times+1 until (sword.Position-Mouse.Hit.p).magnitude<8 or times>=200 or hitted
-		if bodyPos then bodyPos:Destroy() end
-		if bodyGyro then bodyGyro:Destroy() end
-		for i,v in pairs(Pack:GetChildren()) do
-			if v.Name == "Blade"..weld.Name then
-				deb:AddItem(v,3)
-			end
-		end
-	end)
-end
-
-
-do
-	Mouse=Player:GetMouse()
-	Mouse.KeyDown:connect(function(key)
-		keys[key]=true
-		if Mouse and Mouse.Hit then
-			-- Grapple
-			if key == "q" then
-				if not keys["g"] then
-					Grapple("q",Mouse.Hit,18)
-				end
-			end
-			if key == "e" then
-				if not keys["g"] then
-					Grapple("e",Mouse.Hit,18)
-				end
-			end
-			
-			-- Jump
-			if key == " " then
-				Humanoid.PlatformStand=false
-				Grappling=false
-				if qPart then qPart:Destroy() qPart=nil qRope=nil qHit=nil end
-				if ePart then ePart:Destroy() ePart=nil eRope=nil eHit=nil end
-				if qePart then qePart:Destroy() qePart=nil end
-				if qProp then qProp:Destroy() qProp=nil end
-				if eProp then eProp:Destroy() eProp=nil end
-				if qeProp then qeProp:Destroy() qeProp=nil end
-			end
-			
-			-- Toggle Walk/Run
-			if key == "0" then
-				if WalkMode == "Walk" then
-					WalkMode = "Run"
-				elseif WalkMode == "Run" then
-					WalkMode = "Walk"
-				end
-			end
-			
-			-- Blade Reload
-			if key == "r" then
-				if Anim == "" and not Grappling and not Humanoid.PlatformStand and not Humanoid.Jump and WalkMode == "Walk" then
-					Anim = "Blade Switch"
-					CanGrapple = false
-					Humanoid.WalkSpeed = 0
-					if not CurrentBlades[1] and not CurrentBlades[2] then
-						local newRBlade,newLBlade
-						if Pack["RightBlade1"].Part0 and Pack["LeftBlade7"].Part0 then
-							newRBlade = Pack["RightBlade1"]
-							newLBlade = Pack["LeftBlade7"]
-						elseif Pack["RightBlade3"].Part0 and Pack["LeftBlade5"].Part0 then
-							newRBlade = Pack["RightBlade3"]
-							newLBlade = Pack["LeftBlade5"]
-						elseif Pack["RightBlade5"].Part0 and Pack["LeftBlade3"].Part0 then
-							newRBlade = Pack["RightBlade5"]
-							newLBlade = Pack["LeftBlade3"]
-						elseif Pack["RightBlade7"].Part0 and Pack["LeftBlade1"].Part0 then
-							newRBlade = Pack["RightBlade7"]
-							newLBlade = Pack["LeftBlade1"]
-						else
-							print("No more Blades in stock")
-							CanGrapple = true
-							Anim = ""
-							return
-						end
-						Sharpness = 1
-						-- anims
-						local num = 3
-						RePose()
-						for i=1,ASpeed*num do 
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(0,-0.5,-0.8),v3(0,-180,-60),1) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(0,-0.5,-0.8),v3(15,180,60),1) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,-0.2),v3(-30,0,0),1) 
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,-0.2,0),v3(-15,0,0),1) 
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-0.8,0),v3(15,0,-5),1)
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-0.8,0),v3(15,0,5),1)
-							SetWeld(wLSword,0,i,ASpeed*num,wLS,wLS2,v3(0,-0.95,0),v3(-90,-60,0),1) 
-							SetWeld(wRSword,0,i,ASpeed*num,wRS,wRS2,v3(0,-0.95,0),v3(-90,60,0),1) 
-							wait(0)
-						end
-						
-						newRBlade.Part0 = RConnect
-						newRBlade.C0 = cn(0,3.5/2,0.05)
-						CurrentBlades[1] = newRBlade
-						
-						newLBlade.Part0 = LConnect
-						newLBlade.C0 = cn(0,3.5/2,0.05)
-						CurrentBlades[2] = newLBlade
-						
-						PlaySound(as.Draw,1,1,Torso)
-						local num = 1.5
-						RePose()
-						for i=1,ASpeed*num do 
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(0,0.1,-1.5),v3(70,-180,-60),1) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(0,0.1,-1.5),v3(85,180,60),1) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,0),v3(15,0,0),1) 
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(0,0,0),1)
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,PoseLL,PoseLL2,1)
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,PoseRL,PoseRL2,1)
-							SetWeld(wLSword,0,i,ASpeed*num,wLS,wLS2,v3(0,-0.95,0),v3(-90,-60,0),1) 
-								SetWeld(wLSword,1,i,ASpeed*num,v3(0,0,0),v3(0,0,0),v3(0,0,0),v3(-50,0,0),1) 
-							SetWeld(wRSword,0,i,ASpeed*num,wRS,wRS2,v3(0,-0.95,0),v3(-90,60,0),1) 
-								SetWeld(wRSword,1,i,ASpeed*num,v3(0,0,0),v3(0,0,0),v3(0,0,0),v3(-50,0,0),1) 
-							wait(0)
-						end
-						RePose()
-						for i=1,ASpeed*num do 
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,PoseLA,PoseLA2,1) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,PoseRA,PoseRA2,1) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,PoseNE,PoseNE2,1) 
-							SetWeld(wLSword,0,i,ASpeed*num,wLS,wLS2,PoseLS,PoseLS2,1) 
-								SetWeld(wLSword,1,i,ASpeed*num,v3(0,0,0),v3(0,0,0),v3(0,0,0),v3(0,0,0),1) 
-							SetWeld(wRSword,0,i,ASpeed*num,wRS,wRS2,PoseRS,PoseRS2,1) 
-								SetWeld(wRSword,1,i,ASpeed*num,v3(0,0,0),v3(0,0,0),v3(0,0,0),v3(0,0,0),1) 
-							wait(0)
-						end
-						Anim = ""
-						CanGrapple = true
-						
-					elseif CurrentBlades[1] and CurrentBlades[2] then
-						PlaySound(as.Disconnect,1,1,Torso)
-						CurrentBlades[1].Part0 = nil
-						CurrentBlades[1].Part1.CanCollide = true
-						CurrentBlades[1] = nil
-						
-						CurrentBlades[2].Part0 = nil
-						CurrentBlades[2].Part1.CanCollide = true
-						CurrentBlades[2] = nil
-					end
-					Anim = ""
-					CanGrapple = true
-					Humanoid.WalkSpeed = WalkMode == "Walk" and 10 or WalkMode == "Run" and 28
-				end
-			end
-			
-			-- Spin Attack
-			if key == "t" then 
-				if not CurrentBlades[1] and not CurrentBlades[2] then return end
-				if Anim == "" then
-					Anim = "Spin"
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(180,0,-90),1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(0,0,90),1)
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,80,5),1) 
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(0,0,0),1) 
-						SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						wait(0)
-					end
-					Dmg=true
-					RePose()
-					local num = 2
-					PlaySound(as.QuickSlash,0.95,1,Torso)
-					for i=1,ASpeed*num do 
-						if i%4==0 then 
-							MeshEffect(Pack,Torso.CFrame*cn(0,0.5,0),16,0.5,16,0.07,"Dark grey","Cylinder") 
-						end
-						SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(-15,-360-270,0),1) 
-						SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(180,0,-90),1) 
-						SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(0,0,90),1)
-						SetWeld(wLSword,0,i,ASpeed*num,wLS,wLS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						SetWeld(wRSword,0,i,ASpeed*num,wRS,wRS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						wait(0)
-					end
-					Dmg=false
-					ClearWeld(Root)
-					ReturnPose()
-					Anim=""
-				end
-			end
-			
-			-- Block
-			if key == "f" then
-				if WalkMode == "Run" then return end
-				if not CurrentBlades[1] and not CurrentBlades[2] then return end
-				if Anim == "" then
-					Anim = "Blocking"
-					Block.Value = 1
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(73,-45,0),1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(65,38,0),1)
-						SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-90,0,0),1) 
-						SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-90,0,0),1) 
-						wait(0)
-					end
-					PlaySound(as.Block,1,1,Torso)
-					Anim = "Block"
-					repeat wait() until Block.Value<=0 or not keys["f"] or Anim ~= "Block"
-					if Anim == "Block" then
-						Anim = "Unblocking"
-						Block.Value = 0
-						ReturnPose(not Walking)
-						Anim = ""
-					end
-				end
-			end
-			
-			-- Double Grapple
-			if key == "g" then
-				if not keys["q"] and not keys["e"] then
-					Spawn(function() Grapple("q",Mouse.Hit*cn(-(RootPart.Position-Mouse.Hit.p).magnitude/5,0,0),18) end)
-					Spawn(function() Grapple("e",Mouse.Hit*cn((RootPart.Position-Mouse.Hit.p).magnitude/5,0,0),18) end)
-				end
-			end
-			
-			-- Choke Kill
-			if key == "z" then
-				if not CurrentBlades[1] and not CurrentBlades[2] then return end
-				if Anim == "" and not Grappling and not Humanoid.PlatformStand and WalkMode == "Walk" then
-					hit,hitpos = Raycast(RootPart.Position-v3(0,1,0),RootPart.Position-v3(0,1,0) - (RootPart.CFrame *cn(0,0,5)).p,10,Char)
-					
-					if not hit or not hitpos then return end
-					if not hit.Parent:findFirstChild("Humanoid") and not hit.Parent.Parent:findFirstChild("Humanoid") then return end
-					if not hit.Parent:findFirstChild("Torso") and not hit.Parent.Parent:findFirstChild("Torso") then return end
-					
-					hitHum = not hit.Parent:findFirstChild("Humanoid") and (not hit.Parent.Parent:findFirstChild("Humanoid")and nil or hit.Parent.Parent:findFirstChild("Humanoid")) or hit.Parent:findFirstChild("Humanoid")
-					hitTorso = not hit.Parent:findFirstChild("Torso") and (not hit.Parent.Parent:findFirstChild("Torso") and nil or hit.Parent.Parent:findFirstChild("Torso")) or hit.Parent:findFirstChild("Torso")
-					
-					-- Check for titans
-					if hitTorso:GetMass() > 4 then print("OMG U TRIED TO CHOKE A TITAN") return end
-					
-					if hitHum and hitTorso then
-						Anim = "Choke"
-						hitHum.PlatformStand=false
-						RootPart.CFrame=hitTorso.CFrame*cn(0,0,1)
-						wHitTorso = iNew{"Weld",Pack,Part0=RootPart,Part1=hitTorso,C0=cn(0,-0.2,-1)*ca(-10,0,0)}
-						RePose()
-						for i=1,ASpeed do
-							SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(0,-75,-100),1) 
-							SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(0,75,100),1)
-							wait(0)
-						end
-					end
-					
-					local prevSpeed = Humanoid.WalkSpeed
-					repeat wait(0.3)
-						if hitHum then 
-							Humanoid.WalkSpeed = prevSpeed / 5
-							pcall(function()
-								hitHum.PlatformStand=true
-							end)
-						end
-					until not keys["z"] or not hitHum or not hitTorso or hitHum.Health <= 0 or Grappling or Humanoid.PlatformStand or Humanoid.Sit or WalkMode~="Walk" or Humanoid.Jump or Anim~="Choke"
-					if Anim == "Choke" then
-						Humanoid.WalkSpeed=prevSpeed
-						pcall(function() wHitTorso:Destroy() end)
-						ReturnPose()
-						Anim = ""
-					else
-						PlaySound(Slashes.Slash2,1,1,Torso)
-						RePose()
-						for i=1,ASpeed do
-							SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(0,-25,-100),1) 
-							SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(0,25,100),1)
-							SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-90+50,0,0),1) 
-							SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-90+50,0,0),1) 
-							wait(0)
-						end
-						pcall(function() wHitTorso:Destroy() end)
-						pcall(function() Damage(hitHum,3) end)
-						wait(0.3)
-						Humanoid.WalkSpeed=prevSpeed
-						ReturnPose()
-						Anim = ""
-					end
-				end
-			end
-			
-			-- Flip Slash
-			if key == "x" then
-				if not CurrentBlades[1] and not CurrentBlades[2] then return end
-				if Anim == "" then
-					Anim = "Flip Slash"
-					if not Humanoid.PlatformStand then Force.force = v3(0,16000,0) end
-					Legs(0)
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(210,0,20),1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(210,0,-20),1)
-						SetWeld(LLW,0,i,ASpeed,wLL,wLL2,v3(-0.5,-1,0),v3(-60,0,-15),0) 
-						SetWeld(RLW,0,i,ASpeed,wRL,wRL2,v3(0.5,-1,0),v3(-60,0,15),0)  
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(55,0,0),1) 
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(30,0,0),1) 
-						wait(0)
-					end
-					Force.force = v3(0,0,0)
-					PlaySound(as.QuickSlash,1,1,Torso)
-					Dmg=true
-					RePose()
-					Spawn(function()
-						for i=1,ASpeed/1.2 do 
-							SetWeld(LLW,0,i,ASpeed/1.2,wLL,wLL2,v3(-0.5,-1,0),v3(-15,0,-15),0) 
-							SetWeld(RLW,0,i,ASpeed/1.2,wRL,wRL2,v3(0.5,-1,0),v3(-15,0,15),0)  
-							SetWeld(Neck,0,i,ASpeed/1.2,wNE,wNE2,v3(0,1.5,0),v3(30,0,0),1) 
-							SetWeld(wLSword,0,i,ASpeed/1.2,wLS,wLS2,PoseLS,v3(-130,0,0),1) 
-							SetWeld(wRSword,0,i,ASpeed/1.2,wRS,wRS2,PoseRS,v3(-130,0,0),1) 
-							wait(0)
-						end
-					end)
-					for i=1,ASpeed/0.6 do
-						SetWeld(LAW,0,i,ASpeed/0.6,wLA,wLA2,v3(-1.5,0.5,0),v3(20,0,20),1) 
-						SetWeld(RAW,0,i,ASpeed/0.6,wRA,wRA2,v3(1.5,0.5,0),v3(20,0,-20),1)
-						SetWeld(Root,0,i,ASpeed/0.6,wRT,wRT2,v3(0,0,0),v3(-360-30,0,0),1) 
-						wait(0)
-					end
-					RePose()
-					ClearWeld(Root)
-					SetWeld(Root,0,1,1,wRT,wRT2,v3(0,0,0),v3(-30,0,0),0)
-					Dmg=false
-					ReturnPose()
-					Anim = ""
-				end
-			end
-			
-			-- Blade Throw
-			if key == "c" then
-				if Anim == "" and CurrentBlades[1] and CurrentBlades[2] then
-					Anim = "Blade Throw"
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,PoseLA,PoseLA2,1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(200,-15,20),1)
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE,v3(0,1.5,0),v3(15,-20,0),1) 
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,-15,0),1) 
-						wait(0)
-					end
-					ThrowBlade(1)
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,PoseLA,PoseLA2,1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,PoseRA,PoseRA2,1)
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE,v3(0,1.5,0),v3(5,0,0),1) 
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,0,0),1) 
-						wait(0)
-					end
-
-					
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(200,15,-20),1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,PoseRA,PoseRA2,1)
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE,v3(0,1.5,0),v3(15,20,0),1) 
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,15,0),1) 
-						wait(0)
-					end
-					ThrowBlade(2)
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,PoseLA,PoseLA2,1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,PoseRA,PoseRA2,1)
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE,v3(0,1.5,0),v3(5,0,0),1) 
-						SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,0,0),1) 
-						wait(0)
-					end
-					Anim = ""
-				end
-			end
-		end
-	end)
-	
-	Mouse.KeyUp:connect(function(key)
-		keys[key]=false
-		if key == "q" then
-			if keys["g"] then return end
-			if not keys["e"] then Grappling=false end
-			if qPart then qPart:Destroy() qPart=nil qRope = nil qHit=nil end
-			if qePart then qePart:Destroy() qePart=nil end
-			if qProp then qProp:Destroy() qProp=nil end
-			if qeProp then qeProp:Destroy() qeProp=nil end
-			
-			if keys["e"] then
-				if ePart and not eProp and eHit then
-					eProp=AddRP(ePart,"eProp",MaxThrust1)
-					eProp:Fire()
-				end
-			end
-		end
-		if key == "e" then
-			if keys["g"] then return end
-			if not keys["q"] then Grappling=false end
-			if ePart then ePart:Destroy() ePart=nil eRope = nil eHit=nil end
-			if qePart then qePart:Destroy() qePart=nil end
-			if eProp then eProp:Destroy() eProp=nil end
-			if qeProp then qeProp:Destroy() qeProp=nil end
-			
-			if keys["q"] then
-				if qPart and not qProp and qHit then
-					qProp=AddRP(qPart,"qProp",MaxThrust1)
-					qProp:Fire()
-				end
-			end
-		end
-		if key == "g" then
-			if keys["q"] or keys["e"] then return end
-			Grappling=false
-			if qPart then qPart:Destroy() qPart=nil qRope = nil qHit=nil end
-			if ePart then ePart:Destroy() ePart=nil eRope = nil eHit=nil end
-			if qePart then qePart:Destroy() qePart=nil end
-			if qProp then qProp:Destroy() qProp=nil end
-			if eProp then eProp:Destroy() eProp=nil end
-			if qeProp then qeProp:Destroy() qeProp=nil end
-		end
-	end)
-	
-	Mouse.Button1Down:connect(function()
-		if Anim == "" then
-			if not CurrentBlades[1] and not CurrentBlades[2] then return end
-			if Attack == 1 then
-				Anim = "Attack1"
-				RePose()
-				local torsoA,torsoB,torsoC = Root.C0:toEulerAnglesXYZ()
-				for i=1,ASpeed do 
-					SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.3,0.5,-0.25),v3(90,0,20),1) 
-					SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.3,0.5,-0.25),v3(90,0,20),1)
-					SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(math.deg(torsoA),50,0),1) 
-					SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(0,0,0),1) 
-					SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,PoseLS,v3(-90,0,90),1) 
-					SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,PoseRS,v3(-90,0,90),1) 
-					wait(0)
-				end
-				Dmg=true
-				PlaySound(Slashes[mran(1,#Slashes)],1,1,Torso)
-				RePose()
-				for i=1,ASpeed/1.3 do 
-					SetWeld(LAW,0,i,ASpeed/1.3,wLA,wLA2,v3(-1.3,0.5,-0.25),v3(90,0,70),1) 
-					SetWeld(RAW,0,i,ASpeed/1.3,wRA,wRA2,v3(1.3,0.5,-0.25),v3(90,0,70),1)
-					SetWeld(Root,0,i,ASpeed/1.3,wRT,wRT2,v3(0,0,0),v3(math.deg(torsoA),-70,0),1) 
-					SetWeld(Neck,0,i,ASpeed/1.3,wNE,wNE2,v3(0,1.5,0),v3(0,0,0),1) 
-					SetWeld(wLSword,0,i,ASpeed/1.3,wLS,wLS2,PoseLS,v3(-90,-60,90),1) 
-					SetWeld(wRSword,0,i,ASpeed/1.3,wRS,wRS2,PoseRS,v3(-90,-60,90),1) 
-					wait(0)
-				end
-				Dmg=false
-				ReturnPose(not Walking)
-				Anim = ""
-				Attack = 2
-			elseif Attack == 2 then
-				Anim = "Attack2"
-				RePose()
-				local torsoA,torsoB,torsoC = Root.C0:toEulerAnglesXYZ()
-				for i=1,ASpeed do 
-					SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.3,0.5,-0.25),v3(90,0,-20),1) 
-					SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.3,0.5,-0.25),v3(90,0,-20),1)
-					SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(math.deg(torsoA),-50,0),1) 
-					SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(0,0,0),1) 
-					SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,PoseLS,v3(-90,0,-90),1) 
-					SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,PoseRS,v3(-90,0,-90),1) 
-					wait(0)
-				end
-				Dmg=true
-				PlaySound(Slashes[mran(1,#Slashes)],1,1,Torso)
-				RePose()
-				for i=1,ASpeed/1.3 do 
-					SetWeld(LAW,0,i,ASpeed/1.3,wLA,wLA2,v3(-1.3,0.5,-0.25),v3(90,0,-70),1) 
-					SetWeld(RAW,0,i,ASpeed/1.3,wRA,wRA2,v3(1.3,0.5,-0.25),v3(90,0,-70),1)
-					SetWeld(Root,0,i,ASpeed/1.3,wRT,wRT2,v3(0,0,0),v3(math.deg(torsoA),70,0),1) 
-					SetWeld(Neck,0,i,ASpeed/1.3,wNE,wNE2,v3(0,1.5,0),v3(0,0,0),1) 
-					SetWeld(wLSword,0,i,ASpeed/1.3,wLS,wLS2,PoseLS,v3(-90,60,-90),1) 
-					SetWeld(wRSword,0,i,ASpeed/1.3,wRS,wRS2,PoseRS,v3(-90,60,-90),1) 
-					wait(0)
-				end
-				Dmg=false
-				ReturnPose(not Walking)
-				Anim = ""
-				Attack = 3
-			
-			elseif Attack == 3 then
-				if not CurrentBlades[1] and not CurrentBlades[2] then return end
-				if Anim == "" then
-					Anim = "Dual Plunge"
-					RePose()
-					for i=1,ASpeed do 
-						SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.4,0.5,0),v3(0,-105,-75),1) 
-						SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.4,0.5,0),v3(0,105,75),1)
-						SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(-15,0,0),1) 
-						SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						wait(0)
-					end
-					Dmg=true
-					wait(0.1)
-					PlaySound(Slashes[mran(1,#Slashes)],1,1,Torso)
-					RePose()
-					for i=1,ASpeed/1.3 do 
-						SetWeld(LAW,0,i,ASpeed/1.3,wLA,wLA2,v3(-1.4,0.5,0),v3(0,25,-75),1) 
-						SetWeld(RAW,0,i,ASpeed/1.3,wRA,wRA2,v3(1.4,0.5,0),v3(0,-25,75),1)
-						SetWeld(Neck,0,i,ASpeed/1.3,wNE,wNE2,v3(0,1.5,0),v3(-15,0,0),1) 
-						SetWeld(wLSword,0,i,ASpeed/1.3,wLS,wLS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						SetWeld(wRSword,0,i,ASpeed/1.3,wRS,wRS2,v3(0,-0.95,0),v3(-180,0,0),1) 
-						wait(0)
-					end
-					Dmg=false
-					ReturnPose()
-					Anim=""
-				end
-				Attack = 1
-			end
-		end
-		
-		if Anim == "Block" and keys["f"] then
-			if not CurrentBlades[1] and not CurrentBlades[2] then return end
-			Anim = "Block Counter"
-			Block.Value = 0
-			RePose()
-			for i=1,ASpeed do 
-				SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(103,-40,15),1) 
-				SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(95,40,-15),1)
-				SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(0,0,0),1) 
-				SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(5,0,0),1) 
-				SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-90,0,0),1) 
-				SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-90,0,0),1) 
-				wait(0)
-			end
-			PlaySound(Slashes[mran(1,#Slashes)],1,1,Torso)
-			Dmg = true
-			RePose()
-			for i=1,ASpeed/1.3 do 
-				SetWeld(LAW,0,i,ASpeed/1.3,wLA,wLA2,v3(-1.5,0.5,0),v3(-88,-25,-40),1) 
-				SetWeld(RAW,0,i,ASpeed/1.3,wRA,wRA2,v3(1.5,0.5,0),v3(-80,25,40),1)
-				SetWeld(Root,0,i,ASpeed/1.3,wRT,wRT2,v3(0,0,0),v3(0,0,0),1) 
-				SetWeld(Neck,0,i,ASpeed/1.3,wNE,wNE2,v3(0,1.5,0),v3(-20,0,0),1) 
-				SetWeld(wLSword,0,i,ASpeed/1.3,wLS,wLS2,v3(0,-0.95,0),v3(-130,0,0),1) 
-				SetWeld(wRSword,0,i,ASpeed/1.3,wRS,wRS2,v3(0,-0.95,0),v3(-130,0,0),1) 
-				wait(0)
-			end
-			Dmg = false
-			ReturnPose(not Walking)
-			Anim = ""
-		end
-		
-		if Anim == "Choke" and keys["z"] then
-			if not CurrentBlades[1] and not CurrentBlades[2] then return end
-			Anim = "Assassinate"
-		end
-	end)
-end
-
-
-Anim = ""
-Footsteps = {as.Footstep1,as.Footstep2,as.Footstep3}
-Grappling = false
-ASpeed = 9
-Attack = 1
-CurrentBlades = {nil,nil}
-
-PoseLA=v3(-1.5,0.5,0) PoseLA2=v3(-10,15,-20)
-PoseRA=v3(1.5,0.5,0) PoseRA2=v3(-10,-15,20)
-PoseLL=v3(-0.5,-1,0) PoseLL2=v3(0,12,-12)
-PoseRL=v3(0.5,-1,0) PoseRL2=v3(0,-12,12)
-PoseRT=v3(0,0,0) PoseRT2=v3(0,0,0)
-PoseNE=v3(0,1.5,0) PoseNE2=v3(0,0,0)
-PoseLS=v3(0,-0.95,-0.25) PoseLS2=v3(-90,0,0)
-PoseRS=v3(0,-0.95,-0.25) PoseRS2=v3(-90,0,0)
-Arms() Legs()
-ReturnPose()
-Arms(0) Legs(0)
-
-
-Walking=false
-Humanoid.Running:connect(function(Walk) Walking=Walk>0 and true or false end)
-Humanoid.Changed:connect(function() if Anim ~= "" then Humanoid.Jump = false end end)
-Humanoid.Jumping:connect(function()
-	if Anim == "" then
-		if WalkMode == "Run" then
-			if not qPart and not ePart then
-				Anim = "Jump"
-				local torsoVector = RootPart.CFrame.lookVector
-				local forz = v3(torsoVector.x,0,torsoVector.z)
-				RePose()
-				Force.force=forz*12000
-				CanGrapple = false
-				for i=1,ASpeed do 
-					SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(205,-15,15),0) 
-					SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(205,15,-15),0)
-					SetWeld(LLW,0,i,ASpeed,wLL,wLL2,v3(-0.5,-1,0),v3(15,0,-5),0) 
-					SetWeld(RLW,0,i,ASpeed,wRL,wRL2,v3(0.5,-1,0),v3(15,0,5),0)  
-					SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(10,0,0),0)
-					SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(-65,0,0),0)
-					SetWeld(wLSword,0,i,ASpeed,wLS,wLS2,v3(0,-0.95,0),v3(-270,40,0),0) 
-					SetWeld(wRSword,0,i,ASpeed,wRS,wRS2,v3(0,-0.95,0),v3(-270,-40,0),0) 
-					wait(0)
-				end
-				Dmg=true
-				RePose()
-				for i=1,ASpeed*1.8 do 
-					SetWeld(LAW,0,i,ASpeed*1.8,wLA,wLA2,v3(-1.5,0.5,0),v3(155,-15,15),1) 
-					SetWeld(RAW,0,i,ASpeed*1.8,wRA,wRA2,v3(1.5,0.5,0),v3(155,15,-15),1)
-					SetWeld(Neck,0,i,ASpeed*1.8,wNE,wNE2,v3(0,1.5,0),v3(10,0,0),1)
-					SetWeld(Root,0,i,ASpeed*1.8,wRT,wRT2,v3(0,-1.5,0),v3(-360-75,0,0),1)
-					wait(0)
-				end
-				RePose()
-				ClearWeld(Root)
-				SetWeld(Root,0,1,1,wRT,wRT2,v3(0,-1.5,0),v3(-75,0,0),0)
-				Humanoid.WalkSpeed = 0
-				
-				repeat wait(0)
-					hit,hitpos = Raycast(Torso.Position,Torso.Position - (Torso.CFrame*cn(0,0,1)).p,6,Char)
-				until (hit and hitpos) or Grappling
-				Force.force=v3(0,0,0)
-				wait(0.2)
-				Dmg=false
-				ReturnPose()
-				CanGrapple = true
-				Humanoid.WalkSpeed = 28
-				Anim = ""
-			end
-		
-		elseif WalkMode == "Walk" then
-			if not qPart and not ePart then
-				Anim = "Jump"
-				RePose()
-				for i=1,ASpeed do 
-					SetWeld(LAW,0,i,ASpeed,wLA,wLA2,v3(-1.5,0.5,0),v3(135,-15,-15),1) 
-					SetWeld(RAW,0,i,ASpeed,wRA,wRA2,v3(1.5,0.5,0),v3(135,15,15),1)
-					SetWeld(LLW,0,i,ASpeed,wLL,wLL2,v3(-0.5,-1,0),v3(-15,0,-5),1) 
-					SetWeld(RLW,0,i,ASpeed,wRL,wRL2,v3(0.5,-1,0),v3(-15,0,5),1)  
-					SetWeld(Neck,0,i,ASpeed,wNE,wNE2,v3(0,1.5,0),v3(-5,0,0),1)
-					SetWeld(Root,0,i,ASpeed,wRT,wRT2,v3(0,0,0),v3(-15,0,0),1)
-					wait(0)
-				end
-				
-				repeat wait()
-					hit,hitpos = Raycast(Torso.Position,Torso.Position - (Torso.CFrame*cn(0,3,0)).p,6,Char)
-				until hit and hitpos
-				PlaySound(Footsteps[mran(1,#Footsteps)],1,1,Torso)
-				ReturnPose()
-				Anim = ""
-			end
-		end
-	end
+CreateGui()
+ 
+player.CharacterAdded:connect(function()
+char = player.Character
+Torsoz = char:findFirstChild("Torso")
+RA = char:findFirstChild("Right Arm")
+LA = char:findFirstChild("Left Arm")
+RL = char:findFirstChild("Right Leg")
+LL = char:findFirstChild("Left Leg")
+H = char:findFirstChild("Head")
+Hu = char:findFirstChild("Humanoid")
+RS = Torsoz:findFirstChild("Right Shoulder")
+LS = Torsoz:findFirstChild("Left Shoulder")
+RH = Torsoz:findFirstChild("Right Hip")
+LH = Torsoz:findFirstChild("Left Hip")
+N = Torsoz:findFirstChild("Neck")
+stamina = maxstamina
+CreateGui()
 end)
-
-Humanoid.Died:connect(function() Pack:Destroy() script:Destroy() end)
-
-
--- Walk / Run / Idle animations
-Idling = true
-Spawn(function()
-	while wait(0) do
-		if not Grappling and not Humanoid.PlatformStand and not Humanoid.Sit then
-			if Torso.Velocity.magnitude > 2 then
-				Idling = false
-				Arms(0)
-				Legs(0)
-				if WalkMode == "Walk" then -- walk anims
-					local num=1
-					if not Humanoid.Jump and Anim ~= "Flip Slash" and Anim ~= "Jump" then
-						PlaySound(Footsteps[mran(1,#Footsteps)],1,1,Torso)
-					end
-					RePose()
-					for i=1,ASpeed*num do 
-						if Anim ~= "Flip Slash" and Anim ~= "Jump" then
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-1,0),v3(-20,0,-3),0) 
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-1,0),v3(20,0,3),0)  
-						end
-						if Anim == "" then
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(20,-8,-10),0) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(-20,8,10),0)
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(0,0,0),0) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,0),v3(-5,0,0),0) 
-							
-						end
-						wait(0)
-						if Torso.Velocity.magnitude<2 or Grappling then -- break
-							if Anim=="" then 
-								Anim="Return" 
-								ReturnPose() 
-								Anim="" 
-							end 
-							break 
-						end
-					end
-					if not Humanoid.Jump and Anim ~= "Flip Slash" and Anim ~= "Jump" then 
-						PlaySound(Footsteps[mran(1,#Footsteps)],1,1,Torso)
-					end
-					RePose()
-					for i=1,ASpeed*num do
-						if Anim ~= "Flip Slash" and Anim ~= "Jump" then
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-1,0),v3(20,0,-3),0) 
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-1,0),v3(-20,0,3),0) 
-						end
-						if Anim == "" then
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(-20,-8,-10),0) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(20,8,10),0)
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(0,0,0),0) 							
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,0),v3(-5,0,0),0) 
-						end
-						wait(0)
-						if Torso.Velocity.magnitude<2 or Grappling or WalkMode~="Walk" then -- break
-							if Anim=="" then 
-								Anim="Return" 
-								ReturnPose() 
-								Anim="" 
-							end 
-							break 
-						end
-					end
-				elseif WalkMode == "Run" then -- run anims
-					local num = 0.8
-					local ang = 50
-					if not Humanoid.Jump and Anim ~= "Flip Slash" and Anim ~= "Jump" then
-						PlaySound(Footsteps[mran(1,#Footsteps)],1,1,Torso)
-					end
-					RePose()
-					for i=1,ASpeed*num do 
-						if Anim ~= "Flip Slash" and Anim ~= "Jump" then
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-1,0),v3(-ang,0,-3),0) 
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-1,0),v3(ang,0,3),0)  
-						end
-						if Anim == "" then
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(-90+15,90,0),0) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(-90+15,-90,0),0)
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(-15,0,0),0) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,-0.2),v3(-15,0,0),0) 
-						end
-						wait(0)
-						if Torso.Velocity.magnitude<2 or Grappling or WalkMode~="Run" then -- break
-							if Anim=="" then 
-								Anim="Return" 
-								ReturnPose() 
-								Anim="" 
-							end 
-							break 
-						end
-					end
-					if not Humanoid.Jump and Anim ~= "Flip Slash" and Anim ~= "Jump" then
-						PlaySound(Footsteps[mran(1,#Footsteps)],1,1,Torso)
-					end
-					RePose()
-					for i=1,ASpeed*num do 
-						if Anim ~= "Flip Slash" and Anim ~= "Jump" then
-							SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-1,0),v3(ang,0,-3),0) 
-							SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-1,0),v3(-ang,0,-3),0)  
-						end
-						if Anim == "" then
-							SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(-90+25,90,0),0) 
-							SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(-90+25,-90,0),0)
-							SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(-25,0,0),0) 
-							SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,-0.2),v3(-25,0,0),0) 
-						end
-						wait(0)
-						if Torso.Velocity.magnitude<2 or Grappling or WalkMode~="Run" then -- break
-							if Anim=="" then 
-								Anim="Return" 
-								ReturnPose() 
-								Anim="" 
-							end 
-							break 
-						end
-					end
-				end
-			elseif Torso.Velocity.magnitude < 2 then -- idle anims
-				Idling = true
-				if Anim == "" then
-					--ReturnPose()
-					local num=WalkMode=="Walk" and 6.5 or 5
-					RePose()
-					for i=1,ASpeed*num do 
-						SetWeld(LAW,0,i,ASpeed*num,wLA,wLA2,v3(-1.5,0.5,0),v3(0,15,-20),1) 
-						SetWeld(RAW,0,i,ASpeed*num,wRA,wRA2,v3(1.5,0.5,0),v3(0,-15,20),1)
-						SetWeld(LLW,0,i,ASpeed*num,wLL,wLL2,v3(-0.5,-1,0),v3(0,12,-12),1) 
-						SetWeld(RLW,0,i,ASpeed*num,wRL,wRL2,v3(0.5,-1,0),v3(0,-12,12),1)  
-						SetWeld(Root,0,i,ASpeed*num,wRT,wRT2,v3(0,0,0),v3(0,0,0),1) 
-						SetWeld(Neck,0,i,ASpeed*num,wNE,wNE2,v3(0,1.5,-0.1),v3(3,0,0),1) 
-						if Torso.Velocity.magnitude>2 or Anim~="" or Grappling then -- break
-							break 
-						end
-						wait(0)
-					end
-					RePose()
-					for i=1,ASpeed*(num-1.5) do 
-						SetWeld(LAW,0,i,ASpeed*(num-1.5),wLA,wLA2,v3(-1.5,0.5,0),v3(0,-4,-15),1) 
-						SetWeld(RAW,0,i,ASpeed*(num-1.5),wRA,wRA2,v3(1.5,0.5,0),v3(0,4,15),1)
-						SetWeld(LLW,0,i,ASpeed*(num-1.5),wLL,wLL2,v3(-0.5,-1,0),v3(0,4,-4),1) 
-						SetWeld(RLW,0,i,ASpeed*(num-1.5),wRL,wRL2,v3(0.5,-1,0),v3(0,-4,4),1)  
-						SetWeld(Root,0,i,ASpeed*(num-1.5),wRT,wRT2,v3(0,0,0),v3(0,0,0),1)
-						SetWeld(Neck,0,i,ASpeed*(num-1.5),wNE,wNE2,v3(0,1.5,-0.1),v3(-8,0,0),1) 
-						if Torso.Velocity.magnitude>2 or Anim~="" or Grappling then -- break
-							break 
-						end
-						wait(0)
-					end
-				end
-			end
-		end
-	end
-end)
-
-
--- Main loop
-Count = 0
-game:GetService("RunService").RenderStepped:connect(function()
-	Count = Count + 1
-	if Pack.Parent then	
-		-- Grapple sticking
-		if qOffset and qHit and qPart then
-			qPart.CFrame = qHit.CFrame * qOffset
-		end
-		if eOffset and eHit and ePart then
-			ePart.CFrame = eHit.CFrame * eOffset
-		end
-		if qPart and ePart and qePart then
-			qePart.CFrame = cn(qPart.CFrame.p,ePart.CFrame.p)*cn(0,0,-(qPart.CFrame.p-ePart.CFrame.p).magnitude/2)
-		end
-		-- Rope
-		if qRope then
-			qRope.Mesh.Scale = v3(0.25,(qbb.CFrame.p-qPart.CFrame.p).magnitude,0.25)
-			qRope.CFrame = cn(qbb.CFrame.p,qPart.CFrame.p)*ca(-90,0,0)*cn(0,(qbb.CFrame.p-qPart.CFrame.p).magnitude/2,0)
-		end
-		if eRope then
-			eRope.Mesh.Scale = v3(0.25,(ebb.CFrame.p-ePart.CFrame.p).magnitude,0.25)
-			eRope.CFrame = cn(ebb.CFrame.p,ePart.CFrame.p)*ca(-90,0,0)*cn(0,(ebb.CFrame.p-ePart.CFrame.p).magnitude/2,0)
-		end
-		-- Mouse gyro, force, and boosting
-		if (qHit and qProp) or (eHit and eProp) or (qePart and qeProp) then
-			if qProp then qProp:Fire() end
-			if eProp then eProp:Fire() end
-			if qeProp then qeProp:Fire() end
-			RootPart.CFrame = cn(RootPart.CFrame.p,Mouse.Hit.p)
-			if keys["4"] and Gas>0 then
-				if Count%10==0 then
-					iNew{"Smoke",hp2,Color=bc("Medium stone grey").Color,Opacity=0.5,RiseVelocity=7,Size=2}		
-					deb:AddItem(LastMade,1)
-					Gas = Gas - 0.005
-				end
-				Force.force=RootPart.CFrame.lookVector*3000
-				MaxSpeed = 400
-				ThrustP = 5
-				UpdatePropulsions()
-			elseif not keys["4"] then
-				Force.force=RootPart.CFrame.lookVector*0
-				MaxSpeed = 300
-				ThrustP = 5
-				UpdatePropulsions()
-			end
-		elseif not qProp and not eProp and not qeProp then
-			if not Anim == "Jump" and not Anim == "Flip Slash" then
-				Force.force = v3(0,0,0)
-			end
-		end
-		-- Walkspeed
-		if WalkMode == "Walk" and Anim == "" then
-			Humanoid.WalkSpeed = 10
-		elseif WalkMode == "Run" and Anim == "" then
-			Humanoid.WalkSpeed = 28
-		end
-		-- PlatformStand
-		if Grappling and not Humanoid.PlatformStand then
-			GrappleStance()
-		end
-		-- Sharpness and Gas
-		if Sharpness <= 0 then 
-			Sharpness = 0 
-			if CurrentBlades[1] and CurrentBlades[2] then
-				PlaySound(as.Disconnect,1,1,Torso)
-				CurrentBlades[1].Part0 = nil
-				CurrentBlades[1].Part1.CanCollide = true
-				CurrentBlades[1] = nil
-				
-				CurrentBlades[2].Part0 = nil
-				CurrentBlades[2].Part1.CanCollide = true
-				CurrentBlades[2] = nil
-			end
-		end
-		if Gas <= 0 then 
-			Gas = 0 
-		end
-		if Gui then
-			SwordBar.Size = ud(Sharpness,0,1,0)
-			GasBar.Size = ud(Gas,0,1,0)
-		end
-	end
-end)
+ 
+function RAY(pos, dir, startpos, endpos, distleft, collidedlist)
+collidedlist = collidedlist or {char}
+startpos = startpos or pos
+distleft = distleft or dir.unit * dir.magnitude
+endpos = endpos or pos + distleft
+local ray = Ray.new(pos, distleft)
+local hitz,enz = workspace:FindPartOnRayWithIgnoreList(ray, collidedlist)
 --[[
--- props (only really useful for when there is no map)
-for _,prop in pairs(workspace:GetChildren()) do
-	if prop.Name=="prop" and prop:IsA("BasePart") then
-		prop:Destroy()
-	end
+local p = P:Clone()
+p.Parent = char
+p.Size = Vector3.new(0.4,0.4,0.4)
+p.BrickColor = BrickColor.new("Lime green")
+p.CanCollide = false
+p.CFrame = CFrame.new(enz)
+p.Transparency = 0.3
+]]
+if hitz ~= nil then
+if hitz.CanCollide == false then
+table.insert(collidedlist, hitz)
+local newpos = enz
+local newdistleft = distleft - (dir.unit * (pos - newpos).magnitude)
+if newdistleft ~= NV then
+return RAY(newpos-(dir*0.01), dir, startpos, endpos, newdistleft+(dir*0.01), collidedlist)
 end
-tp=iPart{workspace,80,5,700,cf=cn(0,200,600)*ca(15,0,0),an=true,ca=true} tp.Name="prop"
-for i=1,10 do
-	local sizeY = mran(25,250)
-	tp=iPart{workspace,15,sizeY,15,cf=cn(mran(-300,300),sizeY/2.5,mran(-300,300))*ca(mran(-15,15),0,mran(-15,15)),an=true,ca=true} tp.Name="prop"
 end
-for i=1,100 do
-	local tp = iPart{workspace,i==100 and 80 or mran(40,60),6,i==100 and 80 or mran(15,30),an=true,ca=true,co=i==100 and "Black" or "Medium stone grey",
-		cf=cn(mran(-150,150),250+(i*mran(80,120)),mran(-100,100))*ca(mran(-15,15),mran(-360,360),mran(-15,15))
-	} 
-	tp.Name="prop"
-end]]
+end
+ 
+return hitz, enz, ray
+end
+ 
+function Sit()
+Standing = false
+local hitz,enz = RAY(Torsoz.Position, Vector3.new(0,-4.1,0))
+local tordir = Vector3.new(Torsoz.CFrame.lookVector.x,0,Torsoz.CFrame.lookVector.z)
+if (hitz ~= nil and hitz.CanCollide == true) then
+local cf = CFrame.new(enz+Vector3.new(0,1.28,0), enz+Vector3.new(0,1.28,0)+tordir) * CFrame.Angles(math.pi/6,0,0)
+local hitz2,enz2 = RAY(enz+Vector3.new(0,2.25,0), tordir*-2.2)
+Hu.PlatformStand = true
+Torsoz.CFrame = cf
+local bp = Instance.new("BodyPosition", Torsoz)
+bp.Name = "StaminaBodyObject"
+bp.maxForce = Vector3.new(1/0,1/0,1/0)
+bp.D = 100
+bp.position = cf.p
+local bg = Instance.new("BodyGyro", Torsoz)
+bg.Name = "StaminaBodyObject"
+bg.maxTorque = Vector3.new(1/0,1/0,1/0)
+bg.cframe = cf
+bg.D = 100
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.34,-1,0.2), Vector3.new((math.pi/2)-(math.pi/6),0,math.pi/8))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.34,-1,0.2), Vector3.new((math.pi/2)-(math.pi/6),0,-math.pi/8))
+ 
+if hitz2 ~= nil and hitz2.CanCollide == true then
+Joint3.C0 = CFrame.new(0.9,0.4,-0.45) * CFrame.Angles(0,math.pi/2.13,0) * CFrame.Angles(math.pi/2.3,0,0)
+Joint4.C0 = CFrame.new(-0.9,0.4,-0.4) * CFrame.Angles(0,-math.pi/2.05,0) * CFrame.Angles(math.pi/2.3,0,0)
+Joint5.C0 = CFrame.new(0,1,0) * CFrame.Angles(-math.pi/8.8,0,0)
+else
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.4,0.4,0.1), Vector3.new(-(math.pi/6)-(math.pi/10),0,math.pi/9))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.4,0.4,0.1), Vector3.new(-(math.pi/6)-(math.pi/10),0,-math.pi/9))
+SetWeld(Joint5,1,1, NV,NV, Vector3.new(0,1,0), Vector3.new(-math.pi/12,0,0))
+end
+ 
+Sitting = true
+Action = "Sitting"
+end
+end
+ 
+ 
+function Stand()
+Hu.PlatformStand = false
+if Sitting == true then
+local tordir = Torsoz.Position + (Torsoz.CFrame.lookVector*10000)
+local cf = CFrame.new(Torsoz.Position + Vector3.new(0,1.8,0), Vector3.new(tordir.x,Torsoz.Position.y,tordir.z))
+Torsoz.CFrame = cf
+end
+for i, v in pairs(Torsoz:children()) do
+if v.Name == "StaminaBodyObject" then
+v:remove()
+end
+end
+RH.Part0 = nil
+LH.Part0 = nil
+RS.Part0 = nil
+LS.Part0 = nil
+Joint1.Part0 = Torsoz
+Joint1.Part1 = RL
+Joint1.C0 = CFrame.new(0.5,-1,0)
+Joint1.C1 = CFrame.new(0,1,0)
+Joint2.Part0 = Torsoz
+Joint2.Part1 = LL
+Joint2.C0 = CFrame.new(-0.5,-1,0)
+Joint2.C1 = CFrame.new(0,1,0)
+Joint3.Part0 = Torsoz
+Joint3.Part1 = RA
+Joint3.C0 = CFrame.new(1.5,0.5,0)
+Joint3.C1 = CFrame.new(0,0.5,0)
+Joint4.Part0 = Torsoz
+Joint4.Part1 = LA
+Joint4.C0 = CFrame.new(-1.5,0.5,0)
+Joint4.C1 = CFrame.new(0,0.5,0)
+Joint5.Part0 = Torsoz
+Joint5.Part1 = H
+Joint5.C0 = CFrame.new(0,1,0)
+Joint5.C1 = CFrame.new(0,-0.5,0)
+Sitting = false
+Diving = false
+Standing = true
+Action = "Standing"
+end
+ 
+--------------------------------------- Dive ----------------------------------
+ 
+function Dive()
+stamina = stamina - 10
+flow.Value = flow.Value + 10
+if flow.Value > 100 then
+flow.Value = 100
+end
+Standing = false
+local dir = Vector3.new(Torsoz.CFrame.lookVector.x,0,Torsoz.CFrame.lookVector.z)
+GravPoint = 18
+DivingDir = dir
+local cf = CFrame.new(Torsoz.Position, dir+Vector3.new(0,Torsoz.Position.y,0))
+DivingCF = cf
+DivingDir = dir
+Hu.PlatformStand = true
+local bv = Instance.new("BodyVelocity", Torsoz)
+bv.Name = "StaminaBodyObject"
+bv.maxForce = Vector3.new(1/0,1/0,1/0)
+bv.velocity = Vector3.new(DivingDir.x*24,GravPoint,DivingDir.z*24)
+DivingBV = bv
+local bg = Instance.new("BodyGyro", Torsoz)
+bg.Name = "StaminaBodyObject"
+bg.maxTorque = Vector3.new(1/0,1/0,1/0)
+bg.cframe = CFrame.new(Torsoz.Position, Torsoz.Position+bv.velocity) * CFrame.Angles(-math.pi/2,0,0)
+bg.D = 100
+DivingBG = bg
+ 
+local joint = Joint3
+joint.C1 = CFrame.new(0,0.5,0)
+local joint2 = Joint4
+joint2.C1 = CFrame.new(0,0.5,0)
+local joint3 = Joint1
+joint3.C1 = CFrame.new(0,1,0)
+local joint4 = Joint2
+joint4.C1 = CFrame.new(0,1,0)
+ 
+local joint5 = Joint5
+ 
+Diving = true
+Action = "Diving"
+ 
+for i = 1, 8 do
+SetWeld(joint,i,8, Vector3.new(1.5,0.5,0), NV, Vector3.new(1.45,0.5,0.1), Vector3.new(-0.2,-math.pi/9,math.pi/13))
+SetWeld(joint2,i,8, Vector3.new(-1.5,0.5,0), NV, Vector3.new(-1.45,0.5,0.1), Vector3.new(-0.2,math.pi/9,-math.pi/13))
+SetWeld(joint3,i,8, Vector3.new(0.5,-1,0), NV, Vector3.new(0.5,-1,0.03), Vector3.new(-0.2,-math.pi/10,math.pi/14))
+SetWeld(joint4,i,8, Vector3.new(-0.5,-1,0), NV, Vector3.new(-0.5,-1,0.03), Vector3.new(-0.2,math.pi/10,-math.pi/14))
+SetWeld(joint5,i,8, Vector3.new(0,1,0), NV, Vector3.new(0,1,0), Vector3.new(0.45,0,0))
+wait(0.025)
+end
+ 
+local counter = 0
+while Diving == true do
+counter = counter + 1
+bg.Parent = Torsoz
+local hitz, enz = RAY(Torsoz.Position, bv.velocity.unit*4.6)
+if hitz ~= nil and hitz.CanCollide == true then
+local hitz2, enz2 = RAY(Torsoz.Position, Vector3.new(0,-4,0))
+if hitz2 ~= nil then
+Diving = "Rolling"
+Action = "DiveRolling"
+else
+Torsoz.CFrame = Torsoz.CFrame * CFrame.new(0,-0.3,0)
+Torsoz.Velocity = NV
+flow.Value = 0
+break
+end
+end
+if counter > 190 then
+break
+end
+wait(0.02)
+end
+ 
+bv.velocity = (dir*20) + Vector3.new(0,-0.5,0)
+ 
+local bgcf = bg.cframe
+local haslanded = false
+local count = 0
+ 
+while haslanded == false do
+bg.cframe = bgcf * CFrame.Angles(-0.3*count,0,0)
+local hitz, enz = RAY(Torsoz.Position, ((Torsoz.CFrame*CFrame.new(0,-1,0)).p - Torsoz.CFrame.p).unit*1.6)
+if hitz ~= nil and hitz.CanCollide == true then
+haslanded = true
+end
+local hitz2, enz2 = RAY(Torsoz.Position, Vector3.new(0,-3.8,0))
+if hitz2 == nil then
+Torsoz.Velocity = NV
+break
+elseif haslanded == true then
+local bp = Instance.new("BodyPosition", Torsoz)
+bp.Name = "StaminaJumpFix"
+bp.maxForce = Vector3.new(0,1/0,0)
+bp.P = 7000
+bp.position = enz2 + Vector3.new(0,2.8,0)
+game:service("Debris"):AddItem(bp, 0.3)
+else
+bv.velocity = (dir*20) + Vector3.new(0,-(Torsoz.Position - enz2).magnitude*3,0)
+ 
+end
+count = count + 1
+if count <= 6 then
+local i = count
+local j1,j1a = GetWeld(joint)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+SetWeld(joint,i,6, j1,j1a, Vector3.new(1.35,0.5,-0.2), Vector3.new(math.pi/2.6,0,-math.pi/5.8))
+SetWeld(joint2,i,6, j2,j2a, Vector3.new(-1.35,0.5,-0.2), Vector3.new(math.pi/2.6,0,math.pi/5.8))
+SetWeld(joint3,i,6, j3,j3a, Vector3.new(0.51,0.4,-0.6), Vector3.new(-0.1,0,0.05))
+SetWeld(joint4,i,6, j4,j4a, Vector3.new(-0.51,0.4,-0.6), Vector3.new(-0.1,0,-0.05))
+SetWeld(joint5,i,6, j5,j5a, Vector3.new(0,1,0), Vector3.new(-0.4,0,0))
+elseif count >= 50 then
+break
+end
+wait(0.02)
+end
+ 
+Torsoz.Velocity = NV
+ 
+Stand()
+DivingCooldown = 9
+end
+ 
+function FindSurface(part, position)
+local obj = part.CFrame:pointToObjectSpace(position)
+local siz = part.Size/2
+for i,v in pairs(Enum.NormalId:GetEnumItems()) do
+local vec = Vector3.FromNormalId(v)
+local wvec = part.CFrame:vectorToWorldSpace(vec)
+local vz = (obj)/(siz*vec)
+if (math.abs(vz.X-1) < 0.01 or math.abs(vz.Y-1) < 0.01 or math.abs(vz.Z-1) < 0.01) then
+return wvec,vec
+end
+end
+if part.className == "WedgePart" then
+return part.CFrame:vectorToWorldSpace(Vector3.new(0,0.707,-0.707)), Vector3.new(0,0.707,-0.707)
+end
+end
+ 
+function HWallRun(part, pos, side)
+if (part.className == "Part" and part.Shape == Enum.PartType.Block) or part.className ~= "Part" then
+flow.Value = flow.Value + 9
+Standing = false
+HWallRunning = true
+Action = "HWallRunning"
+GravPoint = 10
+HWRLastPart = part
+local dir, dirc = FindSurface(part, pos)
+towall = -dir
+dir = (CFrame.new(NV, dir) * CFrame.Angles(0,side,0)).lookVector
+ 
+local bv = Instance.new("BodyVelocity", Torsoz)
+bv.Name = "StaminaBodyObject"
+bv.maxForce = Vector3.new(1/0,1/0,1/0)
+bv.P = 9000
+bv.velocity = (dir*(sprint-0.5)) + Vector3.new(0,GravPoint,0)
+local bg = Instance.new("BodyGyro", Torsoz)
+bg.Name = "StaminaBodyObject"
+bg.maxTorque = Vector3.new(1/0,1/0,1/0)
+bg.cframe = CFrame.new(Torsoz.Position+(towall*-2), Torsoz.Position) * CFrame.Angles(0,-side,-side/4.2)
+bg.D = 100
+ 
+local sid = Instance.new("Snap")
+ 
+local joint1 = Joint3
+if side == -math.pi/2 then
+SetWeld(joint1,1,1, NV,NV, Vector3.new(1.5,0.5,0), Vector3.new(math.pi/1.3,0.1,math.pi/2.5))
+else
+sid = joint1
+SetWeld(joint1,1,1, NV,NV, Vector3.new(1.4,0.6,0), Vector3.new(-math.pi/12,0,math.pi/7))
+end
+local j1c0 = joint1.C0
+ 
+local joint2 = Joint4
+if side == math.pi/2 then
+SetWeld(joint2,1,1, NV,NV, Vector3.new(-1.5,0.5,0), Vector3.new(math.pi/1.3,-0.1,-math.pi/2.5))
+else
+sid = joint2
+SetWeld(joint2,1,1, NV,NV, Vector3.new(-1.4,0.6,0), Vector3.new(-math.pi/12,0,-math.pi/7))
+end
+local j2c0 = joint2.C0
+ 
+local joint3 = Joint1
+joint3.C1 = CFrame.new(0,1,0)
+if side == -math.pi/2 then
+SetWeld(joint3,1,1, NV,NV, Vector3.new(0.5,-0.38,-0.3), Vector3.new(0,math.pi/2,0.14))
+else
+SetWeld(joint3,1,1, NV,NV, Vector3.new(0.5,-0.8,-0.2), Vector3.new(0,math.pi/2,0.2))
+end
+ 
+local joint4 = Joint2
+joint4.C1 = CFrame.new(0,1,0)
+if side == -math.pi/2 then
+SetWeld(joint4,1,1, NV,NV, Vector3.new(-0.5,-0.8,-0.2), Vector3.new(0,0,0.2))
+else
+SetWeld(joint4,1,1, NV,NV, Vector3.new(-0.5,-0.38,-0.3), Vector3.new(0,0,0.14))
+end
+ 
+local joint5 = Joint5
+SetWeld(joint5,1,1,NV,NV,Vector3.new(0,0.9,0),Vector3.new(0,0,side/7))
+ 
+Torsoz.CFrame = CFrame.new(pos+(towall*-2), pos) * CFrame.Angles(0,-side,-side/2.2)
+bg.cframe = CFrame.new(pos+(towall*-2), pos) * CFrame.Angles(0,-side,-side/2.2)
+ 
+local aniangle = 0
+local aniplus = true
+local aniangle2 = 0
+local aniplus2 = true
+ 
+local prevpart = part
+HWRLastPart = part
+while HWallRunning == true do
+ 
+if aniangle > math.pi then
+aniplus = false
+elseif aniangle < -math.pi then
+aniplus = true  
+end
+if aniplus == true then
+aniangle = aniangle + 0.95
+elseif aniplus == false then
+aniangle = aniangle - 0.95
+end
+ 
+if aniangle2 > math.pi then
+aniplus2 = false
+elseif aniangle2 < -math.pi then
+aniplus2 = true  
+end
+if aniplus2 == true then
+aniangle2 = aniangle2 + 0.23
+elseif aniplus2 == false then
+aniangle2 = aniangle2 - 0.23
+end
+ 
+Hu.PlatformStand = true
+local hitz, enz = RAY(Torsoz.Position, Vector3.new(0,-3,0))
+local hitz2, enz2 = RAY(Torsoz.Position, towall*3.4)
+ 
+--- if player ends wall run on ground
+if hitz ~= nil and hitz.CanCollide == true then
+bg.cframe = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side,0)
+local offset = (bg.cframe.p.y+enz2.y) - bg.cframe.p.y
+Torsoz.CFrame = CFrame.new(Vector3.new(bg.cframe.p.x,offset,bg.cframe.p.z), enz2) * CFrame.Angles(0,-side,0)
+Torsoz.Velocity = NV
+break
+end
+ 
+---- if new wall found --------
+if hitz2 ~= nil and hitz2.CanCollide == true then
+if hitz2 ~= prevpart then
+local direct = CFrame.new(Torsoz.Position, Torsoz.Position+dir) * CFrame.Angles(0,side,0)
+local hitz3, enz3 = RAY(Torsoz.Position, (direct * CFrame.Angles(0,-side/2.3,0)).lookVector*4)
+if hitz3 ~= nil then
+Torsoz.CFrame = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side*1.1,-side/2.2)
+bg.cframe = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side*1.1,-side/2.2)
+dir, dirc = FindSurface(hitz2, enz2)
+towall = -dir
+dir = (CFrame.new(NV, dir) * CFrame.Angles(0,side,0)).lookVector
+prevpart = hitz2
+HWRLastPart = hitz2
+else
+---- if player fails to find new wall to run on
+Torsoz.CFrame = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+bg.cframe = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+Torsoz.Velocity = NV
+HWRCooldown = 8
+break
+end
+end
+--- continue to wall run
+Torsoz.CFrame = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side,-side/2.2)
+bg.cframe = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side,-side/2.2)
+else
+---- if player ends wall run at end of wall
+Torsoz.CFrame = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+bg.cframe = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+Torsoz.Velocity = NV
+HWRCooldown = 8
+break
+end
+ 
+local hitz3, enz3 = RAY(Torsoz.Position, Torsoz.CFrame.lookVector*2)
+if hitz3 ~= nil and hitz3.CanCollide == true then
+Torsoz.CFrame = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+bg.cframe = CFrame.new(Torsoz.Position, Torsoz.Position+dir)
+Torsoz.Velocity = NV
+HWRCooldown = 8
+break
+end
+ 
+bv.Parent = Torsoz
+bv.velocity = (dir*(sprint-0.5)) + Vector3.new(0,GravPoint,0)
+bg.cframe = bg.cframe * CFrame.Angles(aniangle/80,aniangle/80,0)
+Torsoz.CFrame = Torsoz.CFrame * CFrame.Angles(aniangle/80,aniangle/80,0)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+SetWeld(joint3,1,1, j3,j3a, j3,Vector3.new(-0.2+(aniangle/4),0,0))
+SetWeld(joint4,1,1, j4,j4a, j4,Vector3.new(-0.2+(-aniangle/4),0,0))
+if side == math.pi/2 then
+local j1,j1a = GetWeld(joint1)
+SetWeld(joint1,1,1, j1,j1a, j1, Vector3.new(0,0,0.8+(aniangle2/14)))
+else
+local j2,j2a = GetWeld(joint2)
+SetWeld(joint2,1,1, j2,j2a, j2, Vector3.new(0,0,-0.8-(aniangle2/14)))
+end
+ 
+wait(0.025)
+if GravPoint < -100 then
+bg.cframe = CFrame.new(enz2+(towall*-2), enz2) * CFrame.Angles(0,-side,0)
+local offset = math.abs((bg.cframe.p.y+enz2.y) - bg.cframe.p.y)
+Torsoz.CFrame = CFrame.new(Vector3.new(bg.cframe.p.x,offset,bg.cframe.p.z), enz2) * CFrame.Angles(0,-side,0)
+break
+end
+ 
+end
+ 
+if HWallRunning == "Jumping" then
+HWRCooldown = 6
+joint1.C1 = CFrame.new(0,0.5,0)
+ 
+joint2.C1 = CFrame.new(0,0.5,0)
+if side == -math.pi/2 then
+joint2.C0 = CFrame.new(-1.35,0.5,0) * CFrame.Angles(0,side/2.4,-math.pi/3)
+else
+joint2.C0 = CFrame.new(-1.35,0.5,0) * CFrame.Angles(0,side/2.4,-math.pi/4)
+end
+ 
+joint3.C1 = CFrame.new(0,1,0)
+if side == -math.pi/2 then
+joint3.C0 = CFrame.new(0.5,-0.8,0) * CFrame.Angles(0,math.pi+(side/2.4),-math.pi/4)
+else
+joint3.C0 = CFrame.new(0.5,-0.8,0) * CFrame.Angles(0,(side/2.4),math.pi/4)
+end
+joint4.MaxVelocity = 10
+joint4.DesiredAngle = 0
+joint4.C1 = CFrame.new(0,1,0)
+if side == -math.pi/2 then
+joint4.C0 = CFrame.new(-0.5,-0.8,0) * CFrame.Angles(0,math.pi+(side/2.4),math.pi/4)
+else
+joint4.C0 = CFrame.new(-0.5,-0.8,0) * CFrame.Angles(0,(side/2.4),-math.pi/4)
+end
+ 
+local joint5 = Joint5
+joint5.C1 = CFrame.new(0,-0.5,0) * CFrame.Angles(0,side/2.4,0)
+joint5.C0 = CFrame.new(0,1,0)
+ 
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+ 
+GravPoint = 26
+local collidecount = 0
+local bgangle = side/2
+local count = 1
+local dir2 = (CFrame.new(NV, dir) * CFrame.Angles(0,-side/2.4,0)).lookVector
+HWRDir = dir2
+bv.velocity = (dir2*(sprint+5)) + Vector3.new(0,GravPoint,0)
+while HWallRunning == "Jumping" do
+local hitz, enz = RAY(Torsoz.Position, Vector3.new(0,-4,0))
+local hitz2, enz2 = RAY(Torsoz.Position, dir2*1.4)
+if hitz ~= nil and hitz.CanCollide == true then
+local offset = math.abs(enz.y - Torsoz.CFrame.p.y)
+Torsoz.CFrame = CFrame.new(enz+Vector3.new(0,2.9,0), enz+Vector3.new(0,2.9,0)+dir2)
+Torsoz.Velocity = NV
+break
+end
+ 
+if hitz2 ~= nil and hitz2.CanCollide == true then
+collidecount = collidecount + 1
+if collidecount == 4 then
+Torsoz.CFrame = CFrame.new(Torsoz.Position, Torsoz.Position+dir2) * CFrame.new(0,0,0.4)
+Torsoz.Velocity = Vector3.new(0,Torsoz.Velocity.y,0)
+HWRCooldown = 5
+VWRCooldown = 5
+wait(0.02)
+break
+end
+end
+ 
+if side/2 > 0 then
+if bgangle > 0.2 then
+bgangle = bgangle - 0.055
+end
+else
+if bgangle < -0.2 then
+bgangle = bgangle + 0.055
+end
+end
+ 
+if count <= 5 then
+if side == -math.pi/2 then
+SetWeld(joint1,count,5, j1,j1a, Vector3.new(1.35,0.5,0), Vector3.new(0,side/2.4,math.pi/4))
+SetWeld(joint2,count,5, j2,j2a, Vector3.new(-1.35,0.5,0), Vector3.new(0,side/2.4,-math.pi/3))
+SetWeld(joint3,count,5, j3,j3a, Vector3.new(0.5,-0.8,0), Vector3.new(0,-side/1.7,0))
+joint3.C0 = joint3.C0 * CFrame.Angles((-math.pi/4)/5*count,0,0)
+SetWeld(joint4,count,5, j4,j4a, Vector3.new(-0.5,-0.8,0), Vector3.new(0,-side/1.7,0))
+joint4.C0 = joint4.C0 * CFrame.Angles((math.pi/4)/5*count,0,0)
+else
+SetWeld(joint1,count,5, j1,j1a, Vector3.new(1.35,0.5,0), Vector3.new(0,side/2.4,math.pi/3))
+SetWeld(joint2,count,5, j2,j2a, Vector3.new(-1.35,0.5,0), Vector3.new(0,side/2.4,-math.pi/4))
+SetWeld(joint3,count,5, j3,j3a, Vector3.new(0.5,-0.8,0), Vector3.new(0,-side/1.7,0))
+joint3.C0 = joint3.C0 * CFrame.Angles((math.pi/4)/5*count,0,0)
+SetWeld(joint4,count,5, j4,j4a, Vector3.new(-0.5,-0.8,0), Vector3.new(0,-side/1.7,0))
+joint4.C0 = joint4.C0 * CFrame.Angles((-math.pi/4)/5*count,0,0)
+end
+ 
+count = count + 1
+end
+ 
+bg.Parent = Torsoz
+bg.cframe = CFrame.new(NV, dir) * CFrame.Angles(0,side/15,-bgangle)
+bv.velocity = (dir2*(sprint+5)) + Vector3.new(0,GravPoint,0)
+if collidecount ~= 0 then
+bv.velocity = Vector3.new(0,bv.velocity.y,0)
+end
+if GravPoint < -120 then
+break
+end
+wait(0.025)
+end
+end
+ 
+Hu.PlatformStand = false
+bv:remove()
+ 
+HWRGravDrop = false
+Stand()
+HWallRunning = false
+end
+end
+ 
+function VWR(part, pos)
+if (part.className == "Part" and part.Shape == Enum.PartType.Block) or part.className ~= "Part" then
+print("VWR Activated")
+flow.Value = flow.Value + 9
+Standing = false
+VWallRunning = true
+Action = "VWallRunning"
+GravPoint = 0
+local percent = 1
+VWRLastPart = part
+local dir, dirc = FindSurface(part, pos)
+towall = -dir
+dir = (CFrame.new(NV, -dir) * CFrame.Angles(math.pi/2,0,0)).lookVector
+--[[
+local p = P:Clone()
+p.Parent = char
+p.Size = Vector3.new(2,2,2)
+p.BrickColor = BrickColor.new("Lime green")
+p.CanCollide = false
+p.CFrame = part.CFrame * CFrame.new(dirc*5)
+p.Transparency = 0.3
+]]
+local bv = Instance.new("BodyVelocity", Torsoz)
+bv.Name = "StaminaBodyObject"
+bv.maxForce = Vector3.new(1/0,1/0,1/0)
+bv.P = 9000
+bv.velocity = (dir*(sprint-1))*percent
+ 
+local bg = Instance.new("BodyGyro", Torsoz)
+bg.Name = "StaminaBodyObject"
+bg.maxTorque = Vector3.new(1/0,1/0,1/0)
+bg.D = 100
+local posi = pos + (-towall*1.8)
+bg.cframe = CFrame.new(posi, posi+towall) * CFrame.Angles((math.pi/5),0,0)
+Torsoz.CFrame = CFrame.new(posi, posi+towall) * CFrame.Angles((math.pi/5),0,0)
+ 
+local joint1 = Joint3
+SetWeld(joint1,1,1, NV,NV, Vector3.new(1.4,0.45,-0.1), Vector3.new(-math.pi/3.2,0,math.pi/8))
+ 
+local joint2 = Joint4
+SetWeld(joint2,1,1, NV,NV, Vector3.new(-1.4,0.45,-0.1), Vector3.new(-math.pi/3.2,0,-math.pi/8))
+ 
+local joint3 = Joint1
+SetWeld(joint3,1,1, NV,NV, Vector3.new(0.48,-0.6,-0.1), Vector3.new(0,math.pi/2,0))
+joint3.C1 = CFrame.new(0,0.7,0.2) * CFrame.Angles(0,math.pi/2,0)
+ 
+local joint4 = Joint2
+SetWeld(joint4,1,1, NV,NV, Vector3.new(-0.48,-0.6,-0.1), Vector3.new(0,math.pi/2,0))
+joint4.C1 = CFrame.new(0,0.7,0.2) * CFrame.Angles(0,math.pi/2,0)
+ 
+local joint5 = Joint5
+SetWeld(joint5,1,1, NV,NV, Vector3.new(0,1,0), Vector3.new(math.pi/20,0,0))
+ 
+local aniangle = 0
+local aniplus = true
+ 
+while VWallRunning == true do
+local hitz, enz = RAY(Torsoz.Position, towall*2.1)
+local hitz2, enz2 = RAY(Torsoz.Position, (CFrame.new(NV,towall)*CFrame.Angles(math.pi/2,0,0)).lookVector*2.4)
+ 
+if aniangle > math.pi then
+aniplus = false
+elseif aniangle < -math.pi then
+aniplus = true  
+end
+if aniplus == true then
+aniangle = aniangle + (1.3*(percent+0.2))
+elseif aniplus == false then
+aniangle = aniangle - (1.3*(percent+0.2))
+end
+ 
+bv.velocity = (dir*(sprint-1))*percent
+if VWRLeft == true then
+bv.velocity = bv.velocity + ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * (11*percent+5))
+end
+if VWRRight == true then
+bv.velocity = bv.velocity - ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * (11*percent+5))
+end
+ 
+bg.cframe = CFrame.new(posi, posi+towall) * CFrame.Angles((math.pi/5),0,0) * CFrame.Angles(0,aniangle/60,0)
+ 
+SetWeld(joint1,1,1, NV,NV, Vector3.new(1.4,0.45,-0.1), Vector3.new(-math.pi/3.2,aniangle/52,(math.pi/8)+(aniangle/30)))
+SetWeld(joint2,1,1, NV,NV, Vector3.new(-1.4,0.45,-0.1), Vector3.new(-math.pi/3.2,aniangle/52,(-math.pi/8)+(-aniangle/30)))
+SetWeld(joint3,1,1, NV,NV, Vector3.new(0.51,-0.75,-(aniangle/30)), Vector3.new(0,math.pi/2,(aniangle/8)-0.3))
+SetWeld(joint4,1,1, NV,NV, Vector3.new(-0.51,-0.75,(aniangle/30)), Vector3.new(0,math.pi/2,(-aniangle/8)-0.3))
+ 
+if hitz == nil then
+local lv = Torsoz.Position + (Torsoz.CFrame.lookVector*100)
+Torsoz.CFrame = CFrame.new(Torsoz.Position, Vector3.new(lv.x,Torsoz.Position.y,lv.z))
+break
+end
+ 
+if hitz2 ~= nil then
+percent = 0
+VWallRunning = "Falling"
+Action = "VWRFalling"
+GravPoint = -7
+break
+end
+ 
+wait(0.02)
+percent = percent - 0.028
+if percent <= 0.15 then
+VWallRunning = "Falling"
+Action = "VWRFalling"
+end
+end
+ 
+-------------------------- Falling from VWR ------------------------------
+if VWallRunning == "Falling" then
+GravPoint = GravPoint - 1
+local dirpos = (-towall *5) + Vector3.new(0,GravPoint,0)
+bv.velocity = CFrame.new(NV, dirpos).lookVector * dirpos.magnitude
+ 
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+ 
+local counter = 0
+while VWallRunning == "Falling" do
+counter = counter + 1
+local hitz, enz = RAY(H.Position, Vector3.new(0,-2.4,0))
+ 
+dirpos = (-towall *5) + Vector3.new(0,GravPoint,0)
+bv.velocity = CFrame.new(NV, dirpos).lookVector * dirpos.magnitude
+if VWRLeft == true then
+bv.velocity = bv.velocity + ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * 9)
+end
+if VWRRight == true then
+bv.velocity = bv.velocity - ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * 9)
+end
+bg.cframe = CFrame.new(NV, (-towall*30) + Vector3.new(0,GravPoint,0)) * CFrame.Angles(-math.pi/2.55,math.pi,0)
+ 
+if counter <= 35 then
+SetWeld(joint1,counter,35, j1,j1a, Vector3.new(1.4,0.45,-0.1), Vector3.new(math.pi/9,0,math.pi/9))
+SetWeld(joint2,counter,35, j2,j2a, Vector3.new(-1.4,0.45,-0.1), Vector3.new(math.pi/9,0,-math.pi/9))
+SetWeld(joint3,counter,35, j3,j3a, Vector3.new(0.5,-0.75,0), Vector3.new(0,math.pi/2,math.pi/9))
+joint3.C1 = CFrame.new(0,0.7 + (0.3/35*counter),0.2 - (0.2/35*counter)) * CFrame.Angles(0,math.pi/2,0)
+SetWeld(joint4,counter,35, j4,j4a, Vector3.new(-0.5,-0.75,0), Vector3.new(0,math.pi/2,math.pi/9))
+joint4.C1 = CFrame.new(0,0.7 + (0.3/35*counter),0.2 - (0.2/35*counter)) * CFrame.Angles(0,math.pi/2,0)
+SetWeld(joint5,counter,35, j5,j5a, Vector3.new(0,1,0), Vector3.new(-math.pi/6,0,0))
+end
+ 
+if hitz ~= nil then
+bv:remove()
+Torsoz.CFrame = CFrame.new(enz+Vector3.new(0,2,0), (enz+Vector3.new(0,2,0)) + ((-towall*25) + Vector3.new(0,GravPoint,0))) * CFrame.Angles(-math.pi/2.55,math.pi,0)
+Torsoz.Velocity = NV
+Torsoz.RotVelocity = NV
+local bp = Instance.new("BodyPosition", Torsoz)
+bp.maxForce = Vector3.new(1/0,1/0,1/0)
+bp.position = Torsoz.CFrame.p
+game:service("Debris"):AddItem(bp, 0.16)
+flow.Value = 0
+break
+end
+ 
+if GravPoint > - 180 then
+GravPoint = GravPoint - 1.9
+end
+if counter > 200 then
+break
+end
+wait(0.02)
+end
+ 
+local bp = Instance.new("BodyPosition")
+ 
+local counter2 = counter
+local bgangleplus = 0
+ 
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+ 
+local landingpos
+ 
+while VWallRunning == "BackflipFromFall" do
+counter2 = counter2 + 1
+local hitz, enz = RAY(H.Position+Vector3.new(0,2,0), Vector3.new(0,-4.4,0))
+ 
+if counter2 - counter < 13 then
+bgangleplus = bgangleplus - ((math.pi*1.1)/13)
+end
+if counter2 - counter <= 13 then
+SetWeld(joint1,counter2-counter,13, j1,j1a, Vector3.new(1.4,0.5,0.1), Vector3.new(math.pi/2,0.1,math.pi/2))
+SetWeld(joint2,counter2-counter,13, j2,j2a, Vector3.new(-1.4,0.5,0.1), Vector3.new(math.pi/2,-0.1,-math.pi/2))
+SetWeld(joint3,counter2-counter,13, j3,j3a, Vector3.new(0.52,-0.3,-0.65), Vector3.new(0,math.pi/2,0))
+SetWeld(joint4,counter2-counter,13, j4,j4a, Vector3.new(-0.51,-0.9,-0.05), Vector3.new(0,math.pi/2,0))
+SetWeld(joint5,counter2-counter,13, j5,j5a, Vector3.new(0,0.9,0), Vector3.new(-math.pi/7,0,0))
+end
+ 
+dirpos = (-towall *5) + Vector3.new(0,GravPoint,0)
+--bv.velocity = Vector3.new(0,-2,0)
+bv.velocity = CFrame.new(NV, dirpos).lookVector * dirpos.magnitude
+if VWRLeft == true then
+bv.velocity = bv.velocity + ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * 9)
+end
+if VWRRight == true then
+bv.velocity = bv.velocity - ((CFrame.new(NV, towall) * CFrame.Angles(0,math.pi/2,0)).lookVector * 9)
+end
+bg.cframe = CFrame.new(NV, (-towall*30) + Vector3.new(0,GravPoint,0)) * CFrame.Angles((-math.pi/2.4) + bgangleplus,math.pi,0)
+ 
+if hitz ~= nil then
+bv:remove()
+landingpos = enz - (towall*1.3)
+if counter2 - counter > 8 then
+bp = Instance.new("BodyPosition", Torsoz)
+bp.maxForce = Vector3.new(1/0,1/0,1/0)
+bp.position = enz+Vector3.new(0,2.4,0) + (-towall*1)
+VWallRunning = "LandingFall"
+else
+Torsoz.CFrame = bg.cframe + (enz+Vector3.new(0,2.3,0))
+Torsoz.Velocity = NV
+Torsoz.RotVelocity = NV
+local bp = Instance.new("BodyPosition", Torsoz)
+bp.maxForce = Vector3.new(1/0,1/0,1/0)
+bp.position = Torsoz.CFrame.p
+game:service("Debris"):AddItem(bp, 0.14)
+flow.Value = 0
+end
+break
+end
+ 
+if GravPoint > - 180 then
+GravPoint = GravPoint - 1.9
+end
+if counter2 > 200 then
+break
+end
+wait(0.02)
+end
+ 
+if VWallRunning == "LandingFall" then
+print("Landing")
+ 
+joint3.C1 = CFrame.new(0,1,0) * CFrame.Angles(0,math.pi/2,0)
+joint4.C1 = CFrame.new(0,1,0) * CFrame.Angles(0,math.pi/2,0)
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+ 
+local a
+local mesh
+if GravPoint < -70 then
+a = P:Clone()
+a.Parent = Torsoz
+a.Name = "AirLandingEffect"
+a.BrickColor = BrickColor.new("Medium stone grey")
+a.Transparency = 0.3
+a.CFrame = CFrame.new(landingpos+Vector3.new(0,0.4,0))
+mesh = Instance.new("SpecialMesh", a)
+mesh.MeshId = "http://www.roblox.com/asset/?id=20329976"
+mesh.Scale = Vector3.new(0,0,0)
+end
+ 
+local bgcf = CFrame.new(NV, Vector3.new(towall.x,0,towall.z))
+bg.cframe = bgcf * CFrame.Angles(-math.pi/7,0,0)
+local bgval = math.pi/7/2
+ 
+for i = 1, 6 do
+Hu.PlatformStand = true
+SetWeld(joint1,i,6, j1,j1a, Vector3.new(1.2,0.5,0.2), Vector3.new(math.pi/2,0.5,math.pi/1.2))
+SetWeld(joint2,i,6, j2,j2a, Vector3.new(-1.2,0.5,0.2), Vector3.new(math.pi/2,-0.5,-math.pi/1.2))
+SetWeld(joint3,i,6, j3,j3a, Vector3.new(0.51,-0.3,-0.8), Vector3.new(0,math.pi/2,-math.pi/7))
+SetWeld(joint4,i,6, j4,j4a, Vector3.new(-0.51,-0.8,-0.7), Vector3.new(0,math.pi/2,-math.pi/3))
+SetWeld(joint5,i,6, j5,j5a, Vector3.new(0,0.85,0), Vector3.new(-math.pi/8,0,0))
+bp.position = bp.position + Vector3.new(0,-0.07,0)
+bg.cframe = bgcf * CFrame.Angles((-bgval*2) + (bgval/6*i),0,0)
+Torsoz.CFrame = bg.cframe + bp.position
+if a ~= nil then
+mesh.Scale = mesh.Scale + Vector3.new(1.3,0.35,1.3)
+a.Transparency = 0.3 + (0.7/6*i)
+end
+wait(0.02)
+end
+if a ~= nil then
+a:remove()
+end
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+for i = 1, 6 do
+Hu.PlatformStand = true
+SetWeld(joint1,i,6, j1,j1a, Vector3.new(1.5,0.5,0), Vector3.new(0,0,0))
+SetWeld(joint2,i,6, j2,j2a, Vector3.new(-1.5,0.5,0), Vector3.new(0,0,0))
+SetWeld(joint3,i,6, j3,j3a, Vector3.new(0.5,-1,0), Vector3.new(0,math.pi/2,0))
+SetWeld(joint4,i,6, j4,j4a, Vector3.new(-0.5,-1,0), Vector3.new(0,math.pi/2,0))
+SetWeld(joint5,i,6, j5,j5a, Vector3.new(0,1,0), Vector3.new(0,0,0))
+bp.position = bp.position + Vector3.new(0,0.1,0)
+bg.cframe = bgcf * CFrame.Angles(-bgval + (bgval/6*i),0,0)
+Torsoz.CFrame = bg.cframe + bp.position
+wait(0.02)
+end
+ 
+bp:remove()
+end
+ 
+end
+ 
+bv:remove()
+bg:remove()
+VWallRunning = false
+Stand()
+end
+end
+ 
+function Slide(pos)
+flow.Value = flow.Value + 6
+Action = "Sliding"
+Sliding = true
+GravPoint = Torsoz.Velocity.y
+local spd = Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).magnitude + 10
+local dir = Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).unit
+ 
+local bv = Instance.new("BodyVelocity", Torsoz)
+bv.maxForce = Vector3.new(1/0,1/0,1/0)
+bv.velocity = dir*spd
+local bg = Instance.new("BodyGyro", Torsoz)
+bg.maxTorque = Vector3.new(1/0,1/0,1/0)
+bg.cframe = CFrame.new(NV, dir) * CFrame.Angles(math.pi/2.2,0.24,0)
+ 
+local joint1 = Joint1
+local joint2 = Joint2
+local joint3 = Joint3
+local joint4 = Joint4
+local joint5 = Joint5
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+ 
+SetWeld(joint1,1,1, NV,NV, Vector3.new(j1.x,j1.y,j1.z), Vector3.new(j1a.x,math.pi/2,j1a.z))
+joint1.C1 = CFrame.new(0,1,0) * CFrame.Angles(0,math.pi/2,0)
+SetWeld(joint2,1,1, NV,NV, Vector3.new(j2.x,j2.y,j2.z), Vector3.new(j2a.x,math.pi/2,j2a.z))
+joint2.C1 = CFrame.new(0,1,0) * CFrame.Angles(0,math.pi/2,0)
+ 
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+ 
+local count = 0
+local lastpos
+ 
+while Sliding == true do
+count = count + 1
+Hu.PlatformStand = true
+local hitz1, enz1 = RAY(Torsoz.Position+Vector3.new(0,0.03,0), dir *2.5)
+local hitz2, enz2 = RAY(Torsoz.Position-Vector3.new(0,0.2,0), dir *2.5)
+local ghitz, genz = RAY(Torsoz.Position, Vector3.new(0,-2.6,0))
+bv.velocity = dir*spd + Vector3.new(0,GravPoint,0)
+ 
+if count <= 5 then
+SetWeld(joint1,count,5, j1,j1a, Vector3.new(0.5,-0.8,-0.15), Vector3.new(0,(math.pi/2)+0.1,-0.4))
+SetWeld(joint2,count,5, j2,j2a, Vector3.new(-0.5,-1,0), Vector3.new(0,(math.pi/2)-0.4,0))
+SetWeld(joint3,count,5, j3,j3a, Vector3.new(1.5,0.5,0), Vector3.new(-0.7,-0.24,math.pi/5))
+SetWeld(joint4,count,5, j4,j4a, Vector3.new(-1.5,0.5,0), Vector3.new(-0.1,0,-math.pi/1.5))
+SetWeld(joint5,count,5, j5,j5a, Vector3.new(0,1,0), Vector3.new(-0.5,-0.2,0))
+end
+ 
+if (hitz1 ~= nil and hitz1.CanCollide == true) or (hitz2 ~= nil and  hitz2.CanCollide == true) then
+bv:remove()
+bg:remove()
+Sliding = "HitObject"
+end
+if ghitz ~= nil then
+GravPoint = 0
+Torsoz.CFrame = CFrame.new(genz, genz+dir) * CFrame.Angles(math.pi/2.2,0.24,0) + Vector3.new(0,0.7,0)
+spd = spd - 0.95
+else
+if GravPoint > -180 then
+GravPoint = GravPoint - 5.6
+end
+spd = spd - 0.36
+end
+if spd < 7 then
+Sliding = false
+end
+wait(0.02)
+end
+ 
+if Sliding == false then
+local j1,j1a = GetWeld(joint1)
+local j2,j2a = GetWeld(joint2)
+local j3,j3a = GetWeld(joint3)
+local j4,j4a = GetWeld(joint4)
+local j5,j5a = GetWeld(joint5)
+for i = 1, 4 do
+SetWeld(joint1,i,4, j1,j1a, Vector3.new(0.5,-1,0), Vector3.new(0,math.pi/2,0))
+SetWeld(joint2,i,4, j2,j2a, Vector3.new(-0.5,-1,0), Vector3.new(0,math.pi/2,0))
+SetWeld(joint3,i,4, j3,j3a, Vector3.new(1.5,0.5,0), NV)
+SetWeld(joint4,i,4, j4,j4a, Vector3.new(-1.5,0.5,0), NV)
+SetWeld(joint5,i,4, j5,j5a, Vector3.new(0,1,0), NV)
+local hitz, enz = RAY(Torsoz.Position, Vector3.new(0,-2.6,0))
+bg.cframe = CFrame.new(NV, dir) * CFrame.Angles((math.pi/2.2) - ((math.pi/2.2)/4*i),0.24 - (0.24/4*i),0)
+bv.velocity = dir*spd + Vector3.new(0,GravPoint,0)
+ 
+if hitz ~= nil then
+GravPoint = 0
+Torsoz.CFrame = CFrame.new(enz, enz+dir) * CFrame.Angles((math.pi/2.2) - ((math.pi/2.2)/4*i),0.24 - (0.24/4*i),0) + Vector3.new(0,0.7+(1.8/4*i),0)
+spd = spd - 0.95
+else
+if GravPoint > -180 then
+GravPoint = GravPoint - 5.6
+end
+spd = spd - 0.36
+end
+wait(0.02)
+end
+local hitz, enz = RAY(Torsoz.Position, Vector3.new(0,-2.6,0))
+Torsoz.CFrame = CFrame.new(enz, enz+dir) + Vector3.new(0,3,0)
+end
+bv:remove()
+bg:remove()
+SlideCooldown = 10
+Stand()
+end
+ 
+function KD(key)
+if pause.Value == false then
+if key == string.char(32) then
+Space = true
+ 
+local ghitz, genz = RAY(Torsoz.Position, Vector3.new(0,-3.7,0))
+local hitz, enz = RAY(Torsoz.Position+Vector3.new(0,1.1,0), Torsoz.CFrame.lookVector*2.3)
+local righthitz, rightenz
+local lefthitz, leftenz
+ 
+if HWallRunning == false then
+righthitz, rightenz = RAY(Torsoz.Position, ((Torsoz.CFrame * CFrame.new(1.5,0,-0.2)).p - Torsoz.CFrame.p).unit*3.9)
+lefthitz, leftenz = RAY(Torsoz.Position, ((Torsoz.CFrame * CFrame.new(-1.5,0,-0.2)).p - Torsoz.CFrame.p).unit*3.9)
+ 
+elseif HWallRunning == "Jumping" then
+righthitz, rightenz = RAY(Torsoz.Position, ((CFrame.new(Torsoz.Position, Torsoz.Position + HWRDir) * CFrame.new(1.5,0,-0.2)).p - Torsoz.Position).unit*3.9)
+lefthitz, leftenz = RAY(Torsoz.Position, ((CFrame.new(Torsoz.Position, Torsoz.Position + HWRDir) * CFrame.new(-1.5,0,-0.2)).p - Torsoz.Position).unit*3.9)
+ 
+end
+ 
+if Action == "Standing" and Shift == true and (hitz == nil or hitz.CanCollide == false) and (righthitz == nil or righthitz.CanCollide == false) and (lefthitz == nil or lefthitz.CanCollide == false) and (ghitz == nil or ghitz.CanCollide == false) and (Torsoz.Velocity.y > 6 and Torsoz.Velocity.y < 50) and DivingCooldown <= 0 then
+if stamina >= 10 then
+--if Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).magnitude > 12 then
+Dive()
+--end
+end
+end
+ 
+if hitz == nil and VWallRunning == "Falling" then
+VWallRunning = "BackflipFromFall"
+end
+ 
+if Shift == true and Torsoz.Velocity.y > -50 and Diving == false and DivingCooldown <= 0 then
+local hitz2, enz2 = RAY(Torsoz.Position, Vector3.new(0,-3.5,0))
+ 
+if hitz ~= nil then
+if Action == "Standing" and VWRCooldown == 0 then
+if hitz2 == nil or hitz2.CanCollide == false then
+VWR(hitz, enz)
+end
+end
+end
+ 
+if (HWallRunning == false or (HWallRunning == "Jumping" and (HWRLastPart ~= righthitz or HWRLastPart ~= lefthitz))) and HWRCooldown == 0 and VWallRunning == false then
+ 
+if (hitz == nil or HWallRunning == "Jumping") and ((righthitz ~= nil and righthitz.Parent:findFirstChild("Humanoid") == nil and righthitz.Parent.className ~= "Hat") or (lefthitz ~= nil and lefthitz.Parent:findFirstChild("Humanoid") == nil and lefthitz.Parent.className ~= "Hat")) then
+if hitz2 == nil or hitz2.CanCollide == false then
+local right = (rightenz - Torsoz.Position).magnitude
+local left = (leftenz - Torsoz.Position).magnitude
+if right < left then
+if HWallRunning == "Jumping" and HWRLastPart ~= righthitz then
+HWallRunning = false
+while Standing == false do
+wait(0.01)
+end
+print("2nd Right Activated!")
+HWallRun(righthitz, rightenz, -math.pi/2)
+else
+if hitz == nil then
+print("Right Activated")
+HWallRun(righthitz, rightenz, -math.pi/2)
+end
+end
+elseif left < right then
+if HWallRunning == "Jumping" and HWRLastPart ~= lefthitz then
+HWallRunning = false
+while Standing == false do
+wait(0.01)
+end
+print("2nd Left Activated!")
+HWallRun(lefthitz, leftenz, math.pi/2)
+else
+if hitz == nil then
+print("Left Activated")
+HWallRun(lefthitz, leftenz, math.pi/2)
+end
+end
+end
+end
+end
+end
+ 
+end
+ 
+if HWallRunning == true then
+HWallRunning = "Jumping"
+Action = "HWRJumping"
+end
+ 
+elseif key == string.char(48) then
+Shift = true
+elseif key == string.char(50) then
+if Action == "Standing" then
+Sit()
+elseif HWallRunning == true then
+HWRGravDrop = true
+end
+elseif key == string.char(52) then
+if Shift == true and Action == "Standing" and SlideCooldown == 0 and Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).magnitude > 15 and Torsoz.Velocity.y > -40 then
+print("Sliding")
+Slide()
+end
+elseif key == "a" then
+VWRLeft = true
+elseif key == "d" then
+VWRRight = true
+end
+end
+end
+ 
+function KU(key)
+if key == string.char(32) then
+Space = false
+elseif key == string.char(48) then
+Shift = false
+elseif key == string.char(50) then
+if Action == "Sitting" then
+Stand()
+end
+elseif key == string.char(52) then
+Sliding = false
+elseif key == "a" then
+VWRLeft = false
+elseif key == "d" then
+VWRRight = false
+end
+end
+ 
+mouse.KeyDown:connect(function(key) KD(key) end)
+mouse.KeyUp:connect(function(key) KU(key) end)
+ 
+Joint1 = Instance.new("Snap", Torsoz)
+GetWeld(Joint1)
+Joint2 = Instance.new("Snap", Torsoz)
+GetWeld(Joint2)
+Joint3 = Instance.new("Snap", Torsoz)
+GetWeld(Joint3)
+Joint4 = Instance.new("Snap", Torsoz)
+GetWeld(Joint4)
+Joint5 = Instance.new("Snap", Torsoz)
+GetWeld(Joint5)
+Stand()
+ 
+local animatebg = Instance.new("BodyGyro")
+animatebg.D = 100
+local GravAction = "Idle"
+local PrevGravAction = GravAction
+ 
+local prevrapos = (RA.CFrame * CFrame.new(0,-1,0)).p
+local prevlapos = (LA.CFrame * CFrame.new(0,-1,0)).p
+local hue = 0
+local recyclecount = 0
+local tickoffset = tick()
+local fadetab = {}
+local fadetab2 = {}
+local animatebgcount = 0
+ 
+for i = 1, 13 do
+local p = P:Clone()
+p.Name = "Part"..i
+local mesh = Instance.new("SpecialMesh", p)
+mesh.MeshId = "http://www.roblox.com/Asset/?id=9856898"
+mesh.TextureId = "http://www.roblox.com/Asset/?id=48358980"
+table.insert(fadetab, {p, mesh})
+end
+for i = 1, 13 do
+local p = P:Clone()
+p.Name = "Part"..i
+local mesh = Instance.new("SpecialMesh", p)
+mesh.MeshId = "http://www.roblox.com/Asset/?id=9856898"
+mesh.TextureId = "http://www.roblox.com/Asset/?id=48358980"
+table.insert(fadetab2, {p, mesh})
+end
+ 
+game:service("RunService").Stepped:connect(function()
+GravAction = "Idle"
+hue = hue + 3
+hue = hue % 360
+ 
+------------- anim angle changing --------
+if animangle > math.pi then
+animplus = false
+elseif animangle < -math.pi then
+animplus = true  
+end
+if animplus == true then
+animangle = animangle + animspeed
+elseif animplus == false then
+animangle = animangle - animspeed
+end
+ 
+local hitz, enz = RAY(Torsoz.Position, Vector3.new(0,-3.9,0))
+if Shift == true then
+Hu.WalkSpeed = sprint
+else
+Hu.WalkSpeed = 16
+end
+if (FOV >= 70 and FOV < 74) and Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).magnitude > 25 then
+FOV = FOV + 1
+elseif (FOV <= 74 and FOV > 70) and Vector3.new(Torsoz.Velocity.x,0,Torsoz.Velocity.z).magnitude < 20 then
+FOV = FOV - 1
+end
+if pause.Value == true then
+Hu.WalkSpeed = 0
+end
+if Sitting == true then
+local hitz2, enz2 = RAY(Torsoz.Position, Vector3.new(0,-2.2,0))
+Hu.PlatformStand = true
+if hitz2 == nil then
+Stand()
+end
+end
+if Diving == true then
+Hu.PlatformStand = true
+DivingBV.velocity = Vector3.new(DivingDir.x*(sprint+2),GravPoint,DivingDir.z*(sprint+2))
+DivingBG.cframe = CFrame.new(Torsoz.Position, Torsoz.Position+DivingBV.velocity) * CFrame.Angles(-math.pi/2,0,0)
+ 
+if GravPoint > -180 then
+GravPoint = GravPoint - 2
+end
+end
+if DivingCooldown > 0 then
+DivingCooldown = DivingCooldown - 1
+end
+if HWallRunning == true then
+if HWRGravDrop == false then
+GravPoint = GravPoint - 0.4
+else
+GravPoint = GravPoint - 2
+end
+elseif HWallRunning == "Jumping" then
+GravPoint = GravPoint - 1.7
+end
+----------------------------- stamina ----------------------------------------
+if Vector3.new(Torsoz.Velocity.x, 0, Torsoz.Velocity.z).magnitude > 18 and Action == "Standing" and Shift == true then
+if stamina > 0 then
+stamina = stamina - 0.5
+if stamina < 0 then
+Shift = false
+stamina = 0
+end
+else
+Shift = false
+stamina = 0
+end
+if Action == "Standing" then
+animspeed = 0.85
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.5,-1,0), Vector3.new(-animangle/4.85,0,0))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.5,-1,0), Vector3.new(animangle/4.85,0,0))
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.5,0.5,0), Vector3.new(animangle/3.5,0,0))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.5,0.5,0), Vector3.new(-animangle/3.5,0,0))
+end
+elseif Vector3.new(Torsoz.Velocity.x, 0, Torsoz.Velocity.z).magnitude > 12 and Action ~= "Sliding" then
+if stamina < maxstamina then
+stamina = stamina + 0.5
+if stamina > maxstamina then
+stamina = maxstamina
+end
+else
+stamina = maxstamina
+end
+if Action == "Standing" then
+animspeed = 0.65
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.5,-1,0), Vector3.new(-animangle/7,0,0))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.5,-1,0), Vector3.new(animangle/7,0,0))
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.5,0.5,0), Vector3.new(animangle/5,0,0))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.5,0.5,0), Vector3.new(-animangle/5,0,0))
+end
+elseif Vector3.new(Torsoz.Velocity.x, 0, Torsoz.Velocity.z).magnitude < 2 then
+animspeed = 0.1
+if Action == "Standing" then
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.5,-1,0), Vector3.new(-animangle/38,0,0))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.5,-1,0), Vector3.new(animangle/38,0,0))
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.5,0.5,0), Vector3.new(animangle/30,0,0))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.5,0.5,0), Vector3.new(-animangle/30,0,0))
+end
+if stamina < maxstamina then
+if Sitting == false then
+stamina = stamina + 0.65
+else
+stamina = stamina + 1.02
+end
+if stamina > maxstamina then
+stamina = maxstamina
+end
+else
+stamina = maxstamina
+end
+end
+ 
+if hitz == nil then
+if Torsoz.Velocity.y > 1 or (Torsoz.Velocity.y < -1 and Torsoz.Velocity.y > -90) then
+if Action == "Standing" then
+GravAction = "Rising"
+animspeed = 0.1
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.5,-1,0), Vector3.new(-animangle/38,0,0))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.5,-1,0), Vector3.new(animangle/38,0,0))
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.5,0.5,0), Vector3.new((math.pi-0.2)+(animangle/30),0,0))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.5,0.5,0), Vector3.new((math.pi-0.2)+(-animangle/30),0,0))
+if animatebg.Parent ~= nil then
+animatebg.Parent = Torsoz
+animatebg.maxTorque = Vector3.new(1/0,10000,1/0)
+local lokvec = Torsoz.CFrame.lookVector*100
+animatebg.cframe = CFrame.new(NV, Vector3.new(lokvec.x,0,lokvec.z))
+animatebg.Parent = nil
+end
+end
+end
+end
+ 
+if hitz == nil then
+local hitz2, enz2 = RAY(Torsoz.Position, Vector3.new(0,-6,0))
+if hitz2 == nil then
+if Torsoz.Velocity.y < -90 then
+if Action == "Standing" then
+GravAction = "Falling"
+animspeed = 1.1
+animatebg.Parent = Torsoz
+animatebg.maxTorque = Vector3.new(1/0,10000,1/0)
+local lokvec = Torsoz.CFrame.lookVector*100
+animatebg.cframe = CFrame.new(NV, Vector3.new(lokvec.x,0,lokvec.z)) * CFrame.Angles(-math.pi/11,animangle/70,0)
+SetWeld(Joint1,1,1, NV,NV, Vector3.new(0.45,-0.8,0), Vector3.new((animangle/27)-0.3,0,0.18))
+SetWeld(Joint2,1,1, NV,NV, Vector3.new(-0.45,-0.8,0), Vector3.new((-animangle/27)-0.3,0,-0.18))
+SetWeld(Joint3,1,1, NV,NV, Vector3.new(1.4,0.5,0), Vector3.new((math.pi+0.2)+(animangle/26),0,0.18))
+SetWeld(Joint4,1,1, NV,NV, Vector3.new(-1.4,0.5,0), Vector3.new((math.pi+0.2)+(-animangle/26),0,-0.18))
+end
+end
+elseif hitz2.CanCollide == true then
+if animatebg.Parent ~= nil then
+animatebg.Parent = Torsoz
+animatebg.maxTorque = Vector3.new(1/0,10000,1/0)
+local lokvec = Torsoz.CFrame.lookVector*100
+animatebg.cframe = CFrame.new(NV, Vector3.new(lokvec.x,0,lokvec.z))
+animatebg.Parent = nil
+end
+end
+end
+ 
+if GravAction == "Idle" and animatebg.Parent ~= nil then
+animatebg.Parent = nil
+end
+ 
+if math.abs(tickoffset - tick()) > 0.05 then
+tickoffset = tick()
+local flowcolor = HSV(hue, 0.7,1)
+recyclecount = (recyclecount % #fadetab) + 1
+if flow.Value > 25 then
+local lapos = (LA.CFrame * CFrame.new(0,-1,0)).p
+local rapos = (RA.CFrame * CFrame.new(0,-1,0)).p
+local p = fadetab[recyclecount]
+p[1].Parent = m
+p[1].CFrame = CFrame.new((lapos+prevlapos)/2, lapos)
+p[2].Scale = Vector3.new(0.5,0.5,(lapos-prevlapos).magnitude*2)
+p[2].VertexColor = Vector3.new(flowcolor.r,flowcolor.g,flowcolor.b)
+p[1].Transparency = math.abs((flow.Value/120) - 0.8)
+p[1].Transparency = p[1].Transparency + (1/#fadetab)
+local p = fadetab2[recyclecount]
+p[1].Parent = m
+p[1].CFrame = CFrame.new((rapos+prevrapos)/2, rapos)
+p[2].Scale = Vector3.new(0.5,0.5,(rapos-prevrapos).magnitude*2)
+p[2].VertexColor = Vector3.new(flowcolor.r,flowcolor.g,flowcolor.b)
+p[1].Transparency = math.abs((flow.Value/120) - 0.8)
+p[1].Transparency = p[1].Transparency + (1/#fadetab)
+end
+ 
+for i, v in pairs(fadetab) do
+if v[1].Transparency < 0.9 then
+v[1].Transparency = v[1].Transparency + (1/#fadetab)
+fadetab2[i][1].Transparency = fadetab2[i][1].Transparency + (1/#fadetab)
+elseif v[1].Transparency ~= 1 then
+v[1].Transparency = 1
+v[1].Position = Vector3.new(50000,0,0)
+fadetab2[i][1].Transparency = 1
+fadetab2[i][1].Position = Vector3.new(50000,0,0)
+end
+end
+ 
+prevrapos = (RA.CFrame * CFrame.new(0,-1,0)).p
+prevlapos = (LA.CFrame * CFrame.new(0,-1,0)).p
+end
+ 
+if flow.Value > 140 then
+if char.Parent ~= nil then
+char:remove()
+end
+end
+ 
+if flowcooldown > 0 then
+flowcooldown = flowcooldown - 1
+end
+if HWRCooldown > 0 then
+HWRCooldown = HWRCooldown - 1
+end
+if VWRCooldown > 0 then
+if hitz ~= nil and VWRCooldown > 0 then
+VWRCooldown = VWRCooldown - 1
+end
+end
+if SlideCooldown > 0 then
+SlideCooldown = SlideCooldown - 1
+end
+ 
+if Action == "HWallRunning" or Action == "VWallRunning" then
+flow.Value = flow.Value + 0.24
+if flow.Value > 100 then
+flow.Value = 100
+end
+flowcooldown = 40
+elseif Action == "Diving" then
+flowcooldown = 30
+elseif Action == "Sliding" then
+flowcooldown = 15
+elseif Action == "Standing" or Action == "Sitting" then
+if flow.Value > 0 and flowcooldown <= 0 then
+flow.Value = flow.Value - 0.37
+if flow.Value < 0 then
+flow.Value = 0
+end
+end
+end
+ 
+cam.FieldOfView = FOV
+prevanimbgcount = animatebgcount
+sprint = defsprint + ((flow.Value/100)*2.4)
+PrevGravAction = GravAction
+Calculate()
+end)
