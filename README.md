@@ -6,6 +6,13 @@ z.Material = "Metal"
 z.Size = Vector3.new(0.1,0.5,7.5)
 z.Color = Color3.new(0,0,0)
 
+function onTouched(hit)
+local human = hit.Parent:findFirstChild("Humanoid") 
+if (human == nil) then return end 
+human:TakeDamage(1)
+end 
+z.Touched:connect(onTouched)
+
 n=Instance.new("Weld",z)
 n.Part0=z
 n.Part1=game.Players.LocalPlayer.Character["Right Arm"]
@@ -50,6 +57,13 @@ ze.FormFactor = "Custom"
 ze.Material = "Metal"
 ze.Size = Vector3.new(0.1,0.5,7.5)
 ze.Color = Color3.new(0,0,0)
+
+function onTouched(hit)
+local human1 = hit.Parent:findFirstChild("Humanoid") 
+if (human1 == nil) then return end 
+human1:TakeDamage(1)
+end 
+ze.Touched:connect(onTouched)
 
 ne=Instance.new("Weld",ze)
 ne.Part0=ze
