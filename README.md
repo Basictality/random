@@ -43,6 +43,51 @@ weld.Part0=z
 weld.Part1=wed
 weld.C0=CFrame.new(0,0,-4) * CFrame.fromEulerAnglesXYZ(0,0,3.1)
 
+me = game.Players.LocalPlayer.Character
+x=me
+ze=Instance.new("Part",x)
+ze.FormFactor = "Custom"
+ze.Material = "Metal"
+ze.Size = Vector3.new(0.1,0.5,7.5)
+ze.Color = Color3.new(0,0,0)
+
+ne=Instance.new("Weld",ze)
+ne.Part0=ze
+ne.Part1=game.Players.LocalPlayer.Character["Left Arm"]
+ne.C0=CFrame.new(0,1,3.5)
+
+wede=Instance.new("WedgePart",x)
+wede.FormFactor = "Custom"
+wede.Size = Vector3.new(0.3,0.5,0.5)
+wede.Color = Color3.new(0,0,0)
+wede.Material = "Metal"
+
+pae=Instance.new("Part",x)
+pae.FormFactor = "Custom"
+pae.Size = Vector3.new(0.3,0.1,7.5)
+pae.Color = Color3.new(1,0,0)
+
+weld2e=Instance.new("Weld",pae)
+weld2e.Part0=pae
+weld2e.Part1=ze
+weld2e.C0=CFrame.new(0,0,0)
+
+gre=Instance.new("Part",x)
+gre.Size = Vector3.new(0.1,0.1,0.1)
+gre.Color = Color3.new(0,0,0)
+gre.Material = "Metal"
+
+
+grwe=Instance.new("Weld",gre)
+grwe.Part0=ze
+grwe.Part1=gre
+grwe.C0=CFrame.new(0,0,2.5)
+
+welde=Instance.new("Weld",wede)
+welde.Part0=ze
+welde.Part1=wede
+welde.C0=CFrame.new(0,0,-4) * CFrame.fromEulerAnglesXYZ(0,0,3.1)
+
 p=game.Players.LocalPlayer
 c=p.Character
 m=p:GetMouse()
@@ -58,9 +103,11 @@ w.Part0=me.Torso
 w.Part1=me['Right Arm']
 
 for i = 59,1,-1.5 do wait()
+w4.C0=CFrame.new(-1.5,0,0) * CFrame.Angles(i,0,-0.4)
 w.C0=CFrame.new(1.5,0,0) * CFrame.Angles(i,0,0.4)
 end
 wait(0.2)
+w4.C0=CFrame.new(-1.5,0,0) * CFrame.Angles(0,0,-0.4)
 w.C0=CFrame.new(1.5,0,0) * CFrame.Angles(0,0,0.4)
 end
 end)
