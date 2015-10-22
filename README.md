@@ -9,7 +9,7 @@ z.Color = Color3.new(0,0,0)
 function onTouched(hit)
 local human = hit.Parent:findFirstChild("Humanoid") 
 if (human == nil) then return end 
-human:TakeDamage(5)
+human:TakeDamage(10)
 end 
 z.Touched:connect(onTouched)
 
@@ -61,7 +61,7 @@ ze.Color = Color3.new(0,0,0)
 function onTouched(hit)
 local human1 = hit.Parent:findFirstChild("Humanoid") 
 if (human1 == nil) then return end 
-human1:TakeDamage(5)
+human1:TakeDamage(10)
 end 
 ze.Touched:connect(onTouched)
 
