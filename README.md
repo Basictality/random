@@ -102,6 +102,11 @@ w = Instance.new("Weld",me)
 w.Part0=me.Torso
 w.Part1=me['Right Arm']
 
+me = game.Players.LocalPlayer.Character
+w4 = Instance.new("Weld",me)
+w4.Part0=me.Torso
+w4.Part1=me['Left Arm']
+
 for i = 59,1,-1.5 do wait()
 w4.C0=CFrame.new(-1.5,0,0) * CFrame.Angles(i,0,-0.4)
 w.C0=CFrame.new(1.5,0,0) * CFrame.Angles(i,0,0.4)
