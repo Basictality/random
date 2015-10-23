@@ -5,6 +5,7 @@ z.FormFactor = "Custom"
 z.Material = "Metal"
 z.Size = Vector3.new(0.1,0.5,7.5)
 z.Color = Color3.new(0,0,0)
+z.CanCollide = false
 
 function onTouched(hit)
 local human = hit.Parent:findFirstChild("Humanoid") 
@@ -19,12 +20,14 @@ n.Part1=game.Players.LocalPlayer.Character["Right Arm"]
 n.C0=CFrame.new(0,1,3.5)
 
 wed=Instance.new("WedgePart",x)
+wed.CanCollide = false
 wed.FormFactor = "Custom"
 wed.Size = Vector3.new(0.3,0.5,0.5)
 wed.Color = Color3.new(0,0,0)
 wed.Material = "Metal"
 
 pa=Instance.new("Part",x)
+pa.CanCollide = false
 pa.FormFactor = "Custom"
 pa.Size = Vector3.new(0.3,0.1,7.5)
 pa.Color = Color3.new(1,0,0)
@@ -35,6 +38,7 @@ weld2.Part1=z
 weld2.C0=CFrame.new(0,0,0)
 
 gr=Instance.new("Part",x)
+gr.CanCollide = false
 gr.Size = Vector3.new(0.1,0.1,0.1)
 gr.Color = Color3.new(0,0,0)
 gr.Material = "Metal"
@@ -53,6 +57,7 @@ weld.C0=CFrame.new(0,0,-4) * CFrame.fromEulerAnglesXYZ(0,0,3.1)
 me = game.Players.LocalPlayer.Character
 x=me
 ze=Instance.new("Part",x)
+ze.CanCollide = false
 ze.FormFactor = "Custom"
 ze.Material = "Metal"
 ze.Size = Vector3.new(0.1,0.5,7.5)
@@ -71,12 +76,14 @@ ne.Part1=game.Players.LocalPlayer.Character["Left Arm"]
 ne.C0=CFrame.new(0,1,3.5)
 
 wede=Instance.new("WedgePart",x)
+wede.CanCollide = false
 wede.FormFactor = "Custom"
 wede.Size = Vector3.new(0.3,0.5,0.5)
 wede.Color = Color3.new(0,0,0)
 wede.Material = "Metal"
 
 pae=Instance.new("Part",x)
+pae.CanCollide = false
 pae.FormFactor = "Custom"
 pae.Size = Vector3.new(0.3,0.1,7.5)
 pae.Color = Color3.new(1,0,0)
@@ -87,6 +94,7 @@ weld2e.Part1=ze
 weld2e.C0=CFrame.new(0,0,0)
 
 gre=Instance.new("Part",x)
+gre.CanCollide = false
 gre.Size = Vector3.new(0.1,0.1,0.1)
 gre.Color = Color3.new(0,0,0)
 gre.Material = "Metal"
